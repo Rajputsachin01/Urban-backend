@@ -1,0 +1,44 @@
+require("dotenv").config();
+const express = require("express")
+const app = express();
+const cors = require("cors");
+const bodyParser = require("body-parser")
+//cors middleware 
+app.use(cors(
+    {
+      origin: "*",  // Allows all origins
+      methods: ["GET", "POST", "PUT", "DELETE"],  
+    }
+  ));
+// we are using body-parser middleware to parse JSON and URL-encoded data
+app.use(bodyParser.json());
+app.use(express.urlencoded({ extended: true }));
+// For Db connection
+require("./src/utils/db");
+
+//Routes
+const userRoutes = require("./src/routes/userRoutes")
+const bannerRoutes = require("./src/routes/bannerRoutes")
+const adminRoutes = require("./src/routes/adminRoutes")
+const partnerRoutes = require("./src/routes/partnerRoutes")
+
+app.use("/v1/admin",adminRoutes);
+app.use("/v1/user",userRoutes);
+app.use("/v1/banner",bannerRoutes);
+app.use("/v1/partner",partnerRoutes);
+
+//server creating
+const PORT  =  process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () =>{
+    console.log(`Server is running on http://localhost:${PORT}`);
+})
+// For cheking server working on brower
+app.get("/", (req,res)=>{
+    res.send("Server is Active")
+})
+
+
+
+
+
+
