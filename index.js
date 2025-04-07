@@ -3,6 +3,7 @@ const express = require("express")
 const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser")
+const cookieParser = require('cookie-parser'); 
 //cors middleware 
 app.use(cors(
     {
@@ -13,6 +14,7 @@ app.use(cors(
 // we are using body-parser middleware to parse JSON and URL-encoded data
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 // For Db connection
 require("./src/utils/db");
 

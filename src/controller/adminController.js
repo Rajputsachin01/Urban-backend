@@ -1,7 +1,7 @@
 const AdminModel = require("../models/adminModel")
 const { signInToken } = require("../utils/auth")
 const Helper = require("../utils/helper")
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcrypt')
 const saltRounds = 10;
 
 async function getUserWithToken(adminId) {
