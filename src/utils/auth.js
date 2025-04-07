@@ -1,9 +1,10 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const signInToken = (userId) => {
+const signInToken = (userId, type) => {
   return jwt.sign(
     {
-      userId
+      userId,
+      type
     },
     process.env.JWT_SECRET,
   );
@@ -22,6 +23,7 @@ const isAuth = async (req, res, next) => {
           });
         }
         req.userId = decoded?.userId
+        req.type = decoded?.type
       }
     next(); 
   } catch (error) {
