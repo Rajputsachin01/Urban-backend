@@ -26,6 +26,9 @@ const partnerProfile = async (partnerId) => {
     return false;
   }
 };
+//for generating 4 digit random otp
+const generateOTP = () => 
+  Math.floor(1000 + Math.random() * 9000).toString(); 
 //For creating Partner
 const createPartner = async (req, res) => {
 
@@ -113,9 +116,7 @@ const createPartner = async (req, res) => {
     }
 
     if (createdBy === "partner") {
-      //for generating 4 digit random otp
-      const generateOTP = () => 
-        Math.floor(1000 + Math.random() * 9000).toString();      
+
       // const otp = generateOTP();
       const otp = "1234";
       const data = {
@@ -129,7 +130,6 @@ const createPartner = async (req, res) => {
         vehicleImage,
         drivingLicence,
         identityCard,
-        type,
         isVerified: false,
         otp
       };
@@ -152,7 +152,7 @@ const verifyOTP = async (req, res) => {
   // try {
   const { phoneNo, otp } = req.body;
   if (!otp) {
-    return Helper.fail(res, " OTP are required");
+    return Helper.fail(res, "OTP are required");
   }
   // Validating phone no.
   if (phoneNo) {
@@ -169,10 +169,13 @@ const verifyOTP = async (req, res) => {
   if (!partner) {
     return Helper.fail(res, "Invalid OTP");
   }
+  // generateOtp()
+  newOtp = "1234"
   partner.isVerified = true;
-  partner.otp = null; // clear OTP after verification
+  partner.otp = newOtp; // set new otp
   await partner.save();
     // Generate JWT token and user details
+    const type= "partner"
       const { token, partnerDetail } = await getPartnerWithToken(partner._id, type);
       if (!token || !partnerDetail) {
         return Helper.error("Failed to generate token or get partner profile");
@@ -232,7 +235,6 @@ const deletePartner = async (req, res) => {
 
   }
 };
-
 // Partner soft delete
 const removePartner = async (req, res) => {
   try {
@@ -254,11 +256,96 @@ const removePartner = async (req, res) => {
 
   }
 };
+//login with phone number
+const loginPartner = async (req, res) => {
+  try {
+    const { phoneNo } = req.body
+    const query = {};
+    if (phoneNo) {
+      query.phoneNo = phoneNo;
+    }
+    const partner = await PartnerModel.findOne({
+      $or: [phoneNo ? { phoneNo } : null].filter(
+        Boolean
+      ),
+      isDeleted: false
+    });
+    if (!partner) {
+      return Helper.fail(res, "Partner not found ");
+    }
+    // generateOTP();
+    const newotp = "1234";
+    partner.otp = newotp;
+    await partner.save();
+
+    // here code for send the otp to user's phone number
+    
+    return Helper.success(res, "OTP sent successfully");
+  } 
+  catch (error) {
+    console.log(error);
+    return Helper.fail(res, "failed to send OTP");
+  }
+};
+//For partner current location
+const getPartnerLocation = async (req, res) =>{
+  try {
+    const partnerId = req.userId; //Coming from JWT token via isAuth middleware
+    const { location } = req.body
+    const partner = await PartnerModel.findById(partnerId)
+    // console.log(partner)
+    if (!partner) {
+      return Helper.fail(res, "partner not found");
+    }
+    if(!location){
+      return Helper.fail(res, "Please select your location");
+    }
+    let updatedLocation =  await PartnerModel.findByIdAndUpdate(
+      partnerId,
+      {location : location},
+      {
+        new: true,
+      }
+    );
+    console.log({updatedLocation})
+    if(!updatedLocation){
+      return Helper.fail(res, "partner location not updated");
+    }
+    return Helper.success(res, "location updated successfully")
+  } 
+  catch (error) {
+    console.log(error)
+    return Helper.fail(res, "failed to update location");
+  }
+}
+//For fetching partner profile 
+const fetchProfile = async (req, res) =>{
+  try{
+    const partnerId = req.userId;
+    if (!partnerId) {
+      return Helper.fail(res, "partnerId is required!");
+    }
+    const partnerProfile = await PartnerModel.findById(partnerId).select('-idProof -vehicleImage -drivingLicence -identityCard -isDeleted -otp -createdAt -updatedAt');
+    
+    if (!partnerProfile) {
+      return Helper.fail(res, "Partner not found");
+    }
+
+    return Helper.success(res, " Profile fetched successfully", partnerProfile);
+
+  }catch(error){
+    console.log(error)
+    return Helper.fail(res, "Failed to fetch profile");
+  }
+
+};
 module.exports = {
   createPartner,
   deletePartner,
   removePartner,
   verifyOTP,
-  resendOTP
-
+  resendOTP,
+  loginPartner,
+  getPartnerLocation,
+  fetchProfile
 };

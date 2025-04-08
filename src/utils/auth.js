@@ -12,7 +12,6 @@ const signInToken = (userId, type) => {
 
 const isAuth = async (req, res, next) => {
   try {
-    
     const { authorization } = req.headers;
     if (authorization) {
         const token = authorization?.split(' ')[1];
