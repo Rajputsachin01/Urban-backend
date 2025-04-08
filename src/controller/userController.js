@@ -403,6 +403,30 @@ const loginUser = async (req, res) => {
     return Helper.fail(res, "failed to send OTP");
   }
 };
+
+// get user current location
+const getUserLocation = async (req, res) =>{
+  try {
+    const userId = req.userId;
+    const newLocation = req.body
+    console.log(newLocation)
+    console.log(userId)
+    const user = await UserModel.findById(userId).select({
+      password: 0,
+      __v: 0,
+      createdAt: 0,
+      updatedAt: 0,
+    });
+    console.log(user)
+    if (!user) {
+      return Helper.fail(res, "user not found");
+    }
+  } 
+  catch (error) {
+    
+  }
+}
+
 module.exports = {
   registerUser,
   updateUser,
@@ -412,4 +436,5 @@ module.exports = {
   loginUser,
   verifyOTP,
   resendOTP,
+  getUserLocation
 };

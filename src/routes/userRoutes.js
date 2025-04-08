@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { registerUser, updateUser, removeUser, fetchProfile, findUserById, loginUser, verifyOTP, resendOTP, } = require("../controller/userController");
+const { registerUser, updateUser, removeUser, fetchProfile, findUserById, loginUser, verifyOTP, resendOTP, getUserLocation} = require("../controller/userController");
 const { isAuth } = require("../utils/auth");
 
 /*--------------------------------user Routes-------------------------------*/
@@ -13,6 +13,7 @@ router.post("/findById", findUserById)
 router.post("/login", loginUser)
 router.post("/verifyOtp", verifyOTP)
 router.post("/resendOTP", resendOTP)
+router.post("/location",isAuth, getUserLocation)
 
 module.exports = router;
 
