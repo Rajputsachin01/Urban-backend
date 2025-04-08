@@ -28,15 +28,15 @@ const adminProfile = async (adminId) => {
     return false;
   }
 };
-   //for generating 6 digit random otp
+   //for generating 4 digit random otp
    const generateOTP = () =>
-    Math.floor(100000 + Math.random() * 900000).toString();
+    Math.floor(1000 + Math.random() * 9000).toString();
+
    //For creating admin
 const adminRegister = async (req, res) => {
   try {
-
     const { 
-      profileImage,
+      // profileImage,
       firstName,
       lastName,
       email,
@@ -118,7 +118,7 @@ const adminRegister = async (req, res) => {
     }
 
     const userObj = { 
-      profileImage,
+      // profileImage,
       firstName,
       lastName,
       email, 

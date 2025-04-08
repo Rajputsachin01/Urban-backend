@@ -132,8 +132,7 @@ const updateUser = async (req, res) => {
   try {
     let userId = req.userId;
     let type = req.type;
-    console.log({type})
-    // console.log(userId)
+    // console.log({type})
     const { email, phoneNo, address, location } =
       req.body;
     if (!userId) {
@@ -408,22 +407,30 @@ const loginUser = async (req, res) => {
 const getUserLocation = async (req, res) =>{
   try {
     const userId = req.userId;
-    const newLocation = req.body
-    console.log(newLocation)
-    console.log(userId)
-    const user = await UserModel.findById(userId).select({
-      password: 0,
-      __v: 0,
-      createdAt: 0,
-      updatedAt: 0,
-    });
-    console.log(user)
+    const { newLocation } = req.body
+    const user = await UserModel.findById(userId)
     if (!user) {
       return Helper.fail(res, "user not found");
     }
+    if(!newLocation){
+      return Helper.fail(res, "please select your location");
+    }
+    let updatedLocation =  await UserModel.findByIdAndUpdate(
+      userId,
+      {location : newLocation},
+      {
+        new: true,
+      }
+    );
+    console.log({updatedLocation})
+    if(!updatedLocation){
+      return Helper.fail(res, "user location not updated");
+    }
+    return Helper.success(res, "location updated successfully")
   } 
   catch (error) {
-    
+    console.log(error)
+    return Helper.fail(res, "failed to update location");
   }
 }
 
