@@ -35,6 +35,16 @@ const ServiceSchema = new mongoose.Schema({
         required: true,
         default: "",
     },
+    // category: {
+    //     type: [ String ],
+    //     required: true,
+    //     default: "",
+    // },
+    categories: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'category',
+        required: true,
+      }],
     isPublish: {
         type: Boolean,
         default: false
