@@ -115,28 +115,3 @@ const createService = async (req, res) => {
 
 
 
-const searchService = async (req, res) =>{
-  const  { name , price , type}= req.body
-  let query = { isDeleted: false }
-  if(name){
-    query.name = { $regex: name, $options: "i"}
-  }
-  if(price){
-    query.price = { $regex: price, $options: "i"}
-  }
-  if(type){
-    query.type = { $regex: type, $options: "i"}
-  }
-
-
-
-  // if(!search){
-  //   return Helper.fail(res, "please provide the service for searching")
-  // }
-  // const isMatch = await ServiceModel.find(search, {isDeleted:false})
-  // if(!isMatch){
-  //   return Helper.fail(res, "no any servise is found" )
-  // }
-  // return Helper.success(res, "search list is fetched", isMatch)
-
-}
