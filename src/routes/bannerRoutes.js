@@ -6,7 +6,7 @@ const upload = require("../middelware/multer")
 
 /*--------------------------------user Routes-------------------------------*/
 router.post("/createbanner", upload.array("images", 10), createBanner)
-router.post("/remove/:id", removeBanner)
+router.post("/remove", removeBanner)
 router.post("/listing", listingBanner)
 router.post("/update/:id", updateBanner)
 router.post("/delete/:id", deleteBanner)

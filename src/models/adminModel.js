@@ -32,6 +32,13 @@ const adminSchema = new mongoose.Schema({
         type: Number,
         required: true,
         default: "",
+    },
+    otp: {
+        type: String,
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 }, 
  { timestamps: true },

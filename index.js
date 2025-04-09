@@ -24,12 +24,14 @@ const bannerRoutes = require("./src/routes/bannerRoutes")
 const adminRoutes = require("./src/routes/adminRoutes")
 const partnerRoutes = require("./src/routes/partnerRoutes")
 const uploadRoutes = require("./src/routes/uploadRoutes")
+const categoryRoutes = require("./src/routes/categoryRoutes")
 
 app.use("/v1/admin",adminRoutes);
 app.use("/v1/user",userRoutes);
 app.use("/v1/banner",bannerRoutes);
 app.use("/v1/partner",partnerRoutes);
 app.use("/v1/upload",uploadRoutes);
+app.use("/v1/category",categoryRoutes);
 
 //server creating
 const PORT  =  process.env.PORT || 5000;
