@@ -11,8 +11,8 @@ router.post("/verifyOtp", partnerController.verifyOTP)
 router.post("/resendOtp", partnerController.resendOTP)
 router.post("/loginPartner", partnerController.loginPartner)
 router.post("/partnerLocation", isAuth, partnerController.getPartnerLocation)
-router.post("/partnerprofile", isAuth, partnerController.fetchProfile)
-// router.post("/partnerLocation", partnerController.getPartnerLocation)
+router.post("/fetchProfile", isAuth, partnerController.fetchProfile)
+
 
 
 module.exports = router;

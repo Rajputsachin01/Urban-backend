@@ -317,8 +317,8 @@ const getPartnerLocation = async (req, res) =>{
     console.log(error)
     return Helper.fail(res, "failed to update location");
   }
-}
-//For fetching partner profile 
+};
+//For fetching profile 
 const fetchProfile = async (req, res) =>{
   try{
     const partnerId = req.userId;
@@ -331,7 +331,7 @@ const fetchProfile = async (req, res) =>{
       return Helper.fail(res, "Partner not found");
     }
 
-    return Helper.success(res, " Profile fetched successfully", partnerProfile);
+    return Helper.success(res, "Profile fetched successfully", partnerProfile);
 
   }catch(error){
     console.log(error)
