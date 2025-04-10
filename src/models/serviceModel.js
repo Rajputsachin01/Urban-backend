@@ -6,11 +6,7 @@ const ServiceSchema = new mongoose.Schema({
         required: true,
         default: "",
     },
-    size: {
-        type: Number,
-        required: true,
-        default: 0,
-    },
+   
     price: {
         type: Number,
         required: true,
@@ -35,11 +31,6 @@ const ServiceSchema = new mongoose.Schema({
         required: true,
         default: "",
     },
-    // category: {
-    //     type: [ String ],
-    //     required: true,
-    //     default: "",
-    // },
     categories: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'category',

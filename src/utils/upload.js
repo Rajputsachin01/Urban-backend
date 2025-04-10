@@ -1,7 +1,6 @@
 const multer = require('multer');
 const path = require('path');
 const AWS = require('aws-sdk');
-
 // AWS Configuration
 AWS.config.update({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,

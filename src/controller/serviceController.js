@@ -62,30 +62,6 @@ const createService = async (req, res) => {
   }
 }
 
-
-const deleteService = async (req, res) => {
-  try {
-    const id = req.params.id;
-    console.log(id);
-    if (!id) {
-      return Helper.fail(res, "service id required");
-    }
-    const isDeleted = await ServiceModel.findByIdAndDelete(id);
-    console.log(isDeleted);
-
-    if (!isDeleted) {
-      return Helper.fail(res, "service not found!");
-    }
-
-    return Helper.success(res, "Service deleted Successfully", { deletedService: isDeleted });
-
-  } catch (error) {
-    console.log(error);
-    return Helper.fail(res, error.message);i
-
-  }
-};
-
 const removeService = async (req, res) => {
   try {
     const id = req.params.id;
@@ -209,7 +185,6 @@ const updateService = async(req, res)=>{
 }
 module.exports = {
   createService,
-  deleteService,
   removeService,
   listingService,
   updateService
