@@ -6,6 +6,6 @@ const serviceController = require("../controller/serviceController");
 router.post("/createService", serviceController.createService)
 router.post("/updateService/:id", serviceController.updateService)
 router.post("/removeService/:id", serviceController.removeService)
-router.post("/listingService", serviceController. listingService)
+router.post("/listingService", serviceController.listingService)
 
 module.exports = router;

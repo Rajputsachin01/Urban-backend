@@ -1,5 +1,7 @@
 const ServiceModel = require("../models/serviceModel");
 const Helper = require("../utils/helper")
+const mongoose = require("mongoose")
+mongoose.set("strictPopulate", false);
 
 const createService = async (req, res) => {
 
@@ -60,7 +62,7 @@ const createService = async (req, res) => {
     console.error(error);
     return Helper.fail(res, error.message);
   }
-}
+};
 
 const removeService = async (req, res) => {
   try {
@@ -86,6 +88,7 @@ const removeService = async (req, res) => {
     const { search, limit = 3, page = 1 } = req.body;
     
     const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitVal = parseInt(limit);
     // Building the query with search and isDeleted filter
     let matchStage = { isDeleted: false };
     if (search) {
@@ -98,9 +101,25 @@ const removeService = async (req, res) => {
     }
     
     // Fetch paginated services matching the search criteria
-    const serviceList = await ServiceModel.find(matchStage)
-      .skip(skip)
-      .limit(parseInt(limit));
+    // Aggregation pipeline
+    const serviceList = await ServiceModel.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: "categories",   // name of the categories collection
+          localField: "categories",   // field in ServiceModel
+          foreignField: "_id",       // _id in categories collection
+          as: "categoryDetails"
+        }
+      },
+      { $unwind: "$categoryDetails"},
+      { $skip: skip},
+      { $limit: limitVal}
+    ]);
+    // const serviceList = await ServiceModel.find(matchStage)
+    //   .populate('categories')
+    //   .skip(skip)
+    //   .limit(parseInt(limit));
     // Fetch total count for pagination info
     const totalServices = await ServiceModel.countDocuments(matchStage);
     if (serviceList.length === 0) {
@@ -113,9 +132,9 @@ const removeService = async (req, res) => {
     const data = {
       services: serviceList,
       totalServices,
-      totalPages: Math.ceil(totalServices / limit),
+      totalPages: Math.ceil(totalServices / limitVal),
       currentPage: parseInt(page),
-      limit: parseInt(limit),
+      limit: limitVal
     }
     return Helper.success(res, "services listing fetched", data)
   }
@@ -123,7 +142,7 @@ const removeService = async (req, res) => {
     console.log(error);
     return Helper.fail(res, error.message);
   }
-}
+};
 
 const updateService = async(req, res)=>{
   try {
@@ -135,7 +154,8 @@ const updateService = async(req, res)=>{
       time,
       images,
       description,
-      type } = req.body
+      type,
+      categories } = req.body
     const isExist = await ServiceModel.findById(serviceId)
     if(isExist && isExist.isDeleted == true){
         return Helper.fail(res, "Service no longer exist")
@@ -165,6 +185,9 @@ const updateService = async(req, res)=>{
     if(type){
       updatedService.description = description
     }
+    if(categories){
+      updatedService.categories = categories
+    }
     console.log(updatedService)
     const serviceUpdate = await ServiceModel.findByIdAndUpdate(
         serviceId,
@@ -182,7 +205,7 @@ const updateService = async(req, res)=>{
     console.log(error);
         return Helper.fail(res, "failed to update service");
   }
-}
+};
 module.exports = {
   createService,
   removeService,
