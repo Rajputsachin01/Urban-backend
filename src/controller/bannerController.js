@@ -59,7 +59,7 @@ const updateBanner = async(req, res)=>{
     if(description){
         updatedBanner.description = description
     }
-    console.log(updatedBanner)
+    // console.log(updatedBanner)
     const bannerUpdate = await BannerModel.findByIdAndUpdate(
         bannerId,
         updatedBanner,
@@ -99,15 +99,20 @@ const deleteBanner = async (req,res) =>{
 // Banner soft delete
 const removeBanner = async (req,res) =>{
     try{
-      const bannerId = req.params.id
+      const {bannerId} = req.body;
       // console.log(bannerId)
       if(!bannerId){
           return Helper.fail(res, "banner id required")
       }
-      const isRemoved = await BannerModel.findByIdAndUpdate(
-          bannerId,
-          {isDeleted : true}
+      let id = { _id: bannerId };
+      const isRemoved = await BannerModel.findOneAndUpdate(
+        id,
+          {isDeleted : true},
+          { new: true }
       )
+      if(!isRemoved){
+            return Helper.fail(res, "banner not found")
+        }
       return Helper.success(res, "Banner removed successfully")
     } 
     catch(error){
@@ -144,7 +149,7 @@ const listingBanner = async (req, res) => {
       if (bannerList.length === 0) {
           return res.status(404).json({
               success: false,
-              message: "No banners found matching the criteria"
+              message: "No banners found for matching the criteria"
           });
       }
 

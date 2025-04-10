@@ -16,7 +16,6 @@ const createService = async (req, res) => {
     } = req.body;
     console.log(req.body);
 
-    // Validation for required fields
     if (!name) {
       return Helper.fail(res, "Name is required!");
     }
@@ -62,7 +61,8 @@ const createService = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 }
-// Delete service
+
+
 const deleteService = async (req, res) => {
   try {
     const id = req.params.id;
@@ -85,7 +85,7 @@ const deleteService = async (req, res) => {
 
   }
 };
-// Service soft delete
+
 const removeService = async (req, res) => {
   try {
     const id = req.params.id;
@@ -104,11 +104,11 @@ const removeService = async (req, res) => {
 
   }
 };
-// listing Services
+
  const listingService = async (req, res) => {
   try {
     const { search, limit = 3, page = 1 } = req.body;
-    // console.log(search)
+    
     const skip = (parseInt(page) - 1) * parseInt(limit);
     // Building the query with search and isDeleted filter
     let matchStage = { isDeleted: false };
@@ -148,7 +148,7 @@ const removeService = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 }
-//update service
+
 const updateService = async(req, res)=>{
   try {
     const serviceId = req.params.id
@@ -214,3 +214,7 @@ module.exports = {
   listingService,
   updateService
 };
+
+
+
+

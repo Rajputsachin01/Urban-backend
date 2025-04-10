@@ -375,6 +375,9 @@ const resendOTP = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const { phoneNo } = req.body
+    if (!phoneNo) {
+      return Helper.fail(res, "phone number is required");
+    }
     const query = {};
     if (phoneNo) {
       query.phoneNo = phoneNo;
