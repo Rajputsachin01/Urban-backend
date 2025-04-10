@@ -123,7 +123,7 @@ const verifyOTP = async (req, res) => {
       return Helper.error("Failed to generate token or get admin profile");
     }
     res.cookie("token", token)
-    return Helper.success(res, "otp is varified and Token generated successfully.", {
+    return Helper.success(res, "otp is verified and Token generated successfully.", {
       token,
       adminDetail,
     });

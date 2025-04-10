@@ -9,10 +9,6 @@ const createCategory = async (req, res) =>{
         if(!name) return Helper.fail(res, "Category name is required")
         if(!description) return Helper.fail(res, "Category description is required")
         if(!sellingType) return Helper.fail(res, "Category sellingType is required")
-        // if(!size) return Helper.fail(res, "Category size is required")
-        // if(!price) return Helper.fail(res, "Category price is required")
-        // if(!seat) return Helper.fail(res, "Category seat is required")
-
         // check if category already exist
         const categoryCheck = await CategoryModel.findOne({name})
         if(categoryCheck){
@@ -39,7 +35,7 @@ const createCategory = async (req, res) =>{
     }
 }
 
-// update cotegory
+// update category
 const updateCategory = async (req, res) =>{
     try {
         const categoryId = req.params.id
@@ -97,7 +93,7 @@ const findCategoryById = async (req, res) =>{
     try {
         const {id} = req.params
         if(!id){
-            return Helper.fail(res, "id is required")
+            return Helper.fail(res, "categoryId is required")
         }
         const category = await CategoryModel.findOne({_id: id, isDeleted:false})
         if(!category){
@@ -107,10 +103,9 @@ const findCategoryById = async (req, res) =>{
     } 
     catch (error) {
         console.log(error)
-        return Helper.fail(res, "falied to find")
+        return Helper.fail(res, "failed to find")
     }
 }
-
 // soft delete category
 const removeCategory = async (req, res) =>{
     try {
@@ -258,14 +253,3 @@ module.exports = {
     findCategoryById,
     // searchCategory
 }
-
-
-
-// const updateCategory = async (req, res) =>{
-//     try {
-        
-//     } catch (error) {
-//         console.log(error)
-//         return Helper.fail(res, error.error)
-//     }
-// }

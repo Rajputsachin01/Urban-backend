@@ -17,7 +17,7 @@ const CategorySchema = new mongoose.Schema({
     },
     sellingType: {
         type: String,
-        enum : ["sqft", "seat", "pieace"],
+        enum : ["sqft", "seat", "piece"],
         required : true
     },
     size: {
@@ -32,10 +32,6 @@ const CategorySchema = new mongoose.Schema({
         type: Number,
         default: ""
     },
-    // subCategory:{
-    //     type: [String],
-    //     default: ""
-    // },
     isDeleted:{
         type: Boolean,
         default: false
