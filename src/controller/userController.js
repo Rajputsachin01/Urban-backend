@@ -1,4 +1,3 @@
-const userModel = require("../models/userModel");
 const UserModel = require("../models/userModel");
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper");

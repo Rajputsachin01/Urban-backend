@@ -1,7 +1,6 @@
 const mongoose = require("mongoose")
 
 const CategorySchema = new mongoose.Schema({
-    // add icon remaining
     icon : {
         type : String,
         default : ""
@@ -39,4 +38,4 @@ const CategorySchema = new mongoose.Schema({
 },
  { timestamps: true})
 
-module.exports = mongoose.model("category", CategorySchema)
+module.exports = mongoose.model("categories", CategorySchema)

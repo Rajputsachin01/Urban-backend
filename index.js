@@ -26,6 +26,7 @@ const partnerRoutes = require("./src/routes/partnerRoutes")
 const uploadRoutes = require("./src/routes/uploadRoutes")
 const serviceRoutes = require("./src/routes/serviceRoutes")
 const categoryRoutes = require("./src/routes/categoryRoutes")
+const bookingRoutes = require("./src/routes/bookingRoutes")
 
 
 app.use("/v1/admin",adminRoutes);
@@ -35,6 +36,7 @@ app.use("/v1/partner",partnerRoutes);
 app.use("/v1/upload",uploadRoutes);
 app.use("/v1/service",serviceRoutes);
 app.use("/v1/category",categoryRoutes);
+app.use("/v1/booking",bookingRoutes);
 
 
 //server creating

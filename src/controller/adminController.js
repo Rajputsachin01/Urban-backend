@@ -38,14 +38,12 @@ const registerAdmin = async (req, res) => {
   try {
     const { firstName, lastName, phoneNo, email, password } = req.body;
     console.log(req.body);
-
     // validation for required field
     if (!firstName) return Helper.fail(res, "First name is required");
     if (!lastName) return Helper.fail(res, "Last name is required");
     if (!phoneNo) return Helper.fail(res, "Phone number is required");
     if (!email) return Helper.fail(res, "Email is required");
     if (!password) return Helper.fail(res, "Password is required");
-
     // Validating email format
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     if (!emailRegex.test(email)) {
@@ -62,12 +60,10 @@ const registerAdmin = async (req, res) => {
     if (phoneNo) {
       checkObj.$or.push({ phoneNo: phoneNo });
     }
-
     let adminCheck = await AdminModel.find(checkObj);
     if (adminCheck.length > 0) {
       return Helper.fail(res, "Admin already exists with this email or mobile!");
     }
-
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     // Generate OTP
     // const otp = generateOTP();
@@ -82,7 +78,6 @@ const registerAdmin = async (req, res) => {
       otp: otp,
 
     };
-
     const createAdmin = await AdminModel.create(userObj);
     return Helper.success(res, "Admin registered successfully", createAdmin);
   }
