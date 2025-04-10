@@ -135,75 +135,120 @@ const removeCategory = async (req, res) =>{
     }
 }
 
-// listing category
-const  listingCategory = async (req, res) =>{
+// // listing category
+// const  listingCategory = async (req, res) =>{
+//     try {
+//         const { search, limit = 3, page = 1 , sellinType} = req.body;
+//         const skip = (parseInt(page) - 1) * parseInt(limit);
+//         let matchStage = { isDeleted: false };
+//         if (search) {
+//           matchStage.$or = [
+//             { sellingType: { $regex: search, $options: "i" } },      
+//             { name: { $regex: search, $options: "i" } }     
+//           ];
+//         }
+//         // Fetch paginated category matching the search criteria
+//         const categoryList = await CategoryModel.find(matchStage)
+//         .skip(skip)
+//         .limit(parseInt(limit));
+//         // Fetch total count for pagination info
+//         const totalcategories = await CategoryModel.countDocuments(matchStage);
+//         if (categoryList.length === 0) {
+//             return res.status(404).json({
+//                 success: false,
+//                 message: "No category found for matching the criteria"
+//                 });
+//             }
+//         // Pagination metadata
+//         const pagination = {
+//         totalcategories,
+//         totalPages: Math.ceil(totalcategories / limit),
+//         currentPage: parseInt(page),
+//         limit: parseInt(limit),
+//         };
+//         const data = {
+//             categories: categoryList,
+//             pagination
+//         }
+//         return Helper.success(res, "category listing fetched", data)
+//     } 
+//     catch (error) {
+//         console.log(error)
+//         return Helper.fail(res, error.error)
+//     }
+// }
+
+// // search category by sellingType
+// const searchCategory = async (req, res) =>{
+//     try {
+//        const { sellingType } = req.body
+//        if(sellingType.length>0){
+//         const search = await CategoryModel.find({sellingType} )
+//         if(!search){
+//             return Helper.fail(res, "no match found")
+//         }
+//         return Helper.success(res, "data fetched", search)
+//        }
+//        if(!sellingType){
+//         const search = await CategoryModel.find()
+//         if(!search){
+//             return Helper.fail(res, "no any data exist")
+//         }
+//         return Helper.success(res, "data fetched", search)
+//        }
+
+//     } catch (error) {
+//         console.log(error)
+//         return Helper.fail(res, error.error)
+//     }
+// }
+
+const listingCategory = async (req, res) => {
     try {
-        const { search, limit = 3, page = 1 , sellinType} = req.body;
-        // console.log(search)
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        // Building the query with search and isDeleted filter
-        let matchStage = { isDeleted: false };
-        if (search) {
-          matchStage.$or = [
-            { sellingType: { $regex: search, $options: "i" } },      
-            { name: { $regex: search, $options: "i" } }     
-          ];
-        }
-        // Fetch paginated category matching the search criteria
-        const categoryList = await CategoryModel.find(matchStage)
+      const { search, limit = 3, page = 1, sellingType } = req.body;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+      let matchStage = { isDeleted: false };
+      if (search) {
+        matchStage.$or = [
+          { sellingType: { $regex: search, $options: "i" } },
+          { name: { $regex: search, $options: "i" } },
+        ];
+      }
+      if (sellingType && sellingType.length > 0) {
+        matchStage.sellingType = sellingType;
+      }
+      const categoryList = await CategoryModel.find(matchStage)
         .skip(skip)
         .limit(parseInt(limit));
-        // Fetch total count for pagination info
-        const totalcategories = await CategoryModel.countDocuments(matchStage);
-        if (categoryList.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "No category found for matching the criteria"
-                });
-            }
-        // Pagination metadata
-        const pagination = {
+
+      const totalcategories = await CategoryModel.countDocuments(matchStage);
+  
+      if (categoryList.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: "No category found matching the criteria",
+        });
+      }
+  
+      const pagination = {
         totalcategories,
         totalPages: Math.ceil(totalcategories / limit),
         currentPage: parseInt(page),
         limit: parseInt(limit),
-        };
-        const data = {
-            categories: categoryList,
-            pagination
-        }
-        return Helper.success(res, "category listing fetched", data)
-    } 
-    catch (error) {
-        console.log(error)
-        return Helper.fail(res, error.error)
-    }
-}
-
-// search category by sellingType
-const searchCategory = async (req, res) =>{
-    try {
-       const { sellingType } = req.body
-       if(sellingType.length>0){
-        const search = await CategoryModel.find({sellingType} )
-        if(!search){
-            return Helper.fail(res, "no match found")
-        }
-        return Helper.success(res, "data fetched", search)
-       }
-       if(!sellingType){
-        const search = await CategoryModel.find()
-        if(!search){
-            return Helper.fail(res, "no any data exist")
-        }
-        return Helper.success(res, "data fetched", search)
-       }
-
+      };
+  
+      const data = {
+        categories: categoryList,
+        pagination,
+      };
+  
+      return Helper.success(res, "category listing fetched", data);
     } catch (error) {
-        console.log(error)
-        return Helper.fail(res, error.error)
+      console.log(error);
+      return Helper.fail(res, error.message);
     }
-}
+  };
+  
 
 module.exports = {
     createCategory,
@@ -211,7 +256,7 @@ module.exports = {
     removeCategory,
     listingCategory,
     findCategoryById,
-    searchCategory
+    // searchCategory
 }
 
 
