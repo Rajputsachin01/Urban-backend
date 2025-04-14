@@ -32,15 +32,22 @@ const adminSchema = new mongoose.Schema({
         type: Number,
         required: true,
         default: "",
+    },
+    otp: {
+        type: String,
+    },
+    isDeleted: {
+        type: Boolean,
+        default: false
     }
 }, 
  { timestamps: true },
 );
 
 //  Hash Password Before Saving
-adminSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-});
+// adminSchema.pre("save", async function (next) {
+//     if (!this.isModified("password")) return next();
+//     this.password = await bcrypt.hash(this.password, 10);
+//     next();
+// });
 module.exports = mongoose.model("admin", adminSchema);

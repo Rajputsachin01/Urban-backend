@@ -1,14 +1,14 @@
 const AdminModel = require("../models/adminModel")
 const { signInToken } = require("../utils/auth")
 const Helper = require("../utils/helper")
-const bcrypt = require('bcryptjs')
+const bcrypt = require('bcrypt')
 const saltRounds = 10;
 
-async function getUserWithToken(adminId) {
+async function getUserWithToken(adminId, type) {
   try {
     let adminDetail = await adminProfile(adminId);
     //adminDetail.first_name + " " + adminDetail.last_name, if we want to send then use it
-    const token = signInToken(adminId);
+    const token = signInToken(adminId, type);
     return { token: token, adminDetail: adminDetail };
   } catch (error) {
     console.log(error);
@@ -28,45 +28,34 @@ const adminProfile = async (adminId) => {
     return false;
   }
 };
-   //for generating 6 digit random otp
-   const generateOTP = () =>
-    Math.floor(100000 + Math.random() * 900000).toString();
-   //For creating admin
-const adminRegister = async (req, res) => {
+
+//for generating 4 digit random otp
+const generateOTP = () =>
+  Math.floor(1000 + Math.random() * 9000).toString();
+
+//For creating admin
+const registerAdmin = async (req, res) => {
   try {
-
-    const { 
-      profileImage,
-      firstName,
-      lastName,
-      email,
-      password,
-      phoneNo
-    } = req.body;
+    const { firstName, lastName, phoneNo, email, password } = req.body;
     console.log(req.body);
-
     // validation for required field
-    if (!firstName) {
-      return Helper.fail(res, "FirstName is required");
-    }
-    if (!lastName) {
-      return Helper.fail(res, "LastName is required");
-    }
-    if (!email) {
-      return Helper.fail(res, "Email is required");
-    }
-    if (!password) {
-      return Helper.fail(res, "Password is required");
-    }
-    if (!phoneNo) {
-        return Helper.fail(res, "PhoneNo is required");
-      }
+    if (!firstName) return Helper.fail(res, "First name is required");
+    if (!lastName) return Helper.fail(res, "Last name is required");
+    if (!phoneNo) return Helper.fail(res, "Phone number is required");
+    if (!email) return Helper.fail(res, "Email is required");
+    if (!password) return Helper.fail(res, "Password is required");
     // Validating email format
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     if (!emailRegex.test(email)) {
       return Helper.fail(res, "Email is not valid!");
     }
-
+    // Validating phoneNumber 
+    if (phoneNo) {
+      const phoneRegex = /^\d{6,14}$/;
+      if (!phoneRegex.test(phoneNo)) {
+        return Helper.fail(res, " number is not valid!");
+      }
+    }
     let checkObj = { $or: [{ email: email }] };
     if (phoneNo) {
       checkObj.$or.push({ phoneNo: phoneNo });
@@ -75,101 +64,35 @@ const adminRegister = async (req, res) => {
     if (adminCheck.length > 0) {
       return Helper.fail(res, "Admin already exists with this email or mobile!");
     }
- 
-    // // Generate unique referral code
-    // const generateReferralCode = async () => {
-    //   let isUnique = false,
-    //     uniqueCode;
-    //   while (!isUnique) {
-    //     const letters = String.fromCharCode(
-    //       65 + Math.floor(Math.random() * 26),
-    //       65 + Math.floor(Math.random() * 26)
-    //     );
-    //     const digits = Math.floor(1000 + Math.random() * 9000);
-    //     uniqueCode = `${letters}${digits}`;
-    //     const existingCode = await UserModel.findOne({
-    //       referralCode: uniqueCode,
-    //     });
-    //     if (!existingCode) isUnique = true;
-    //   }
-    //   return uniqueCode;
-    // };
-    // const newReferralCode = await generateReferralCode();
-    // let referredBy = null;
-    // if (referralCode) {
-    //   const referrer = await UserModel.findOne({ referralCode });
-    //   if (!referrer) {
-    //     return Helper.fail(res, "Invalid Referral Code!");
-    //   }
-    //   referredBy = referrer._id;
-    // }
-    //for hashing password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     // Generate OTP
-    const otp = generateOTP();
-
-    // Validating phone no.
-    if (phoneNo) {
-      const phoneRegex = /^\d{6,14}$/; // Allows only digits(0-9) and ensures length is between 6 and 14
-
-      if (!phoneRegex.test(phoneNo)) {
-        return Helper.fail(res, " number is not valid!");
-      }
-    }
-
-    const userObj = { 
-      profileImage,
+    // const otp = generateOTP();
+    const otp = "1234"
+    const userObj = {
+      // profileImage,
       firstName,
       lastName,
-      email, 
+      email,
       phoneNo,
       password: hashedPassword,
       otp: otp,
-        
-     };
 
+    };
     const createAdmin = await AdminModel.create(userObj);
-  
-     return Helper.success(res, "Admin registered successfully", createAdmin);
-  } catch (error) {
+    return Helper.success(res, "Admin registered successfully", createAdmin);
+  }
+  catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal server error" })
-  } ////
-// Generate JWT token and user details
-const { token, adminDetail } = await getUserWithToken(createAdmin._id);
-if (!token || !adminDetail) {
-  return Helper.error(res, "Failed to generate token or get admin profile");
+  }
 }
-// if (user.referredBy) {
-//   const referralBonus = 100;
 
-//   await WalletModel.findOneAndUpdate(
-//     { userId: user.referredBy },
-//     { $inc: { points: referralBonus } },
-//     { upsert: true } // Creates wallet if not exists
-//   );
-
-//   console.log(`100 points credited to referrer: ${user.referredBy}`);
-// }
-
-return Helper.success(res, "Token generated successfully.", {
-  token,
-  userDetail, 
-}); ///
-}
 //for verifying OTP
 const verifyOTP = async (req, res) => {
   try {
-    const { email, phoneNo, otp } = req.body;
+    const { phoneNo, otp } = req.body;
     if (!otp) {
-      return Helper.fail(res, "  OTP are required");
-    }
-    if (email) {
-      // Validating email format
-      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-      if (!emailRegex.test(email)) {
-        return Helper.fail(res, "Email is not valid!");
-      }
+      return Helper.fail(res, " OTP are required");
     }
     // Validating phone no.
     if (phoneNo) {
@@ -178,40 +101,24 @@ const verifyOTP = async (req, res) => {
         return Helper.fail(res, " phoneNo is not valid!");
       }
     }
-    const user = await AdminModel.findOne({
-      $or: [{ phoneNo: phoneNo }, { email: email }],
-      otp,
-    });
-
+    const user = await AdminModel.findOne({ phoneNo: phoneNo, otp });
     if (!user) {
       return Helper.fail(res, "Invalid OTP");
     }
-    // generateOTP();
-    let newotp = "123456";
+    // let newotp = generateOTP();
+    let newotp = "1234";
     await AdminModel.updateOne(
-      {
-        $or: [{ phoneNo: phoneNo }, { email: email }],
-      },
+      { phoneNo: phoneNo },
       { $set: { otp: newotp } }
     );
     // Generate JWT token and user details
-    const { token, adminDetail } = await getUserWithToken(user._id);
+    const type = "admin"
+    const { token, adminDetail } = await getUserWithToken(user._id, type);
     if (!token || !adminDetail) {
       return Helper.error("Failed to generate token or get admin profile");
     }
-    // if (user.referredBy) {
-    //   const referralBonus = 100;
-
-    //   await WalletModel.findOneAndUpdate(
-    //     { userId: user.referredBy },
-    //     { $inc: { points: referralBonus } },
-    //     { upsert: true } // Creates wallet if not exists
-    //   );
-
-    //   console.log(`100 points credited to referrer: ${user.referredBy}`);
-    // }
-
-    return Helper.success(res, "Token generated successfully.", {
+    res.cookie("token", token)
+    return Helper.success(res, "otp is verified and Token generated successfully.", {
       token,
       adminDetail,
     });
@@ -220,53 +127,139 @@ const verifyOTP = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-//for user login
-const login = async (req, res) => {
-  try {
-    const { phoneNo, email, password} = req.body;
 
-    if (!password) {
-      return Helper.fail(res, "Please enter password");
+//for user login
+const loginAdmin = async (req, res) => {
+  try {
+    const { phoneNo } = req.body;
+    if (!phoneNo) {
+      return Helper.fail(res, "phone number is required");
     }
     const query = {};
     if (phoneNo) {
       query.phoneNo = phoneNo;
     }
-    if (email) {
-      query.email = email;
-    }
-    const admin = await adminModel.findOne({
-      $or: [phoneNo ? { phoneNo } : null, email ? { email } : null].filter(
+    const admin = await AdminModel.findOne({
+      $or: [phoneNo ? { phoneNo } : null].filter(
         Boolean
       ),
+      isDeleted: false
     });
-    const otp = generateOTP();
-    // console.log(otp);
-
     if (!admin) {
-      return Helper.fail(res, "Email not found, please enter a valid email!");
+      return Helper.fail(res, "admin not found, please enter a valid phone number");
     }
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) {
-      return Helper.fail(res, "Invalid password");
-    }
+    // const otp = generateOTP();
+    const newotp = "1234";
+    admin.otp = newotp;
+    await admin.save();
 
-    return Helper.success(res, "Login successful", { admin });
+    // here code for send the otp to user's phone number
+
+    return Helper.success(res, "OTP sent successfull");
 
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, "Login failed");
+    return Helper.fail(res, "failed to send OTP");
   }
 };
-module.exports = {
-  adminRegister,
-  login,
-  verifyOTP
-  
+
+// update admin
+const updateAdmin = async (req, res) => {
+  try {
+    let adminId = req.userId;
+    const { firstName, lastName, email, phoneNo } =
+      req.body;
+    if (!adminId) {
+      return Helper.fail(res, "adminId is missing from request");
+    }
+    //validating email
+    if (email) {
+      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+      if (!emailRegex.test(email)) {
+        return Helper.fail(res, "Email is not valid!");
+      }
+    }
+    // Validate mobile if provided
+    if (phoneNo) {
+      const phoneRegex = /^\d{6,14}$/;
+      if (!phoneRegex.test(phoneNo)) {
+        return Helper.fail(res, "phoneNo is not valid!");
+      }
+    }
+    let admin = await AdminModel.findById(adminId);
+    console.log(admin)
+    if (!admin) {
+      return Helper.fail(res, "admin not found!");
+    }
+    let objToUpdate = {};
+    if (firstName) {
+      objToUpdate.firstName = firstName;
+    }
+    if (lastName) {
+      objToUpdate.lastName = lastName;
+    }
+    if (phoneNo) {
+      objToUpdate.phoneNo = phoneNo;
+    }
+    if (email) {
+      const emailRegex = new RegExp(`^${email}$`, "i");
+      const admin = await AdminModel.findOne({
+        email: emailRegex,
+        _id: { $ne: adminId },
+      });
+
+      if (admin) {
+        return Helper.fail(res, "Email is already used in another account");
+      }
+      objToUpdate.email = email;
+    }
+    let updatedProfile = await AdminModel.findByIdAndUpdate(
+      adminId,
+      objToUpdate,
+      {
+        new: true,
+      }
+    );
+    if (updatedProfile) {
+      return Helper.success(res, "User  updated successfully!", updatedProfile);
+    }
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
 };
 
-// const query = {};
-// if (phoneNo) query.phoneNo = phoneNo;
-// if (email) query.email = email;
+// soft delete admin
+const removeAdmin = async (req, res) => {
+  try {
+    const { adminId } = req.body;
+    if (!adminId) {
+      return Helper.fail(res, "Please provide Admin Id ");
+    }
+    let i = { _id: adminId };
+    let deleted = await AdminModel.findOneAndUpdate(
+      i,
+      { isDeleted: true },
+      { new: true }
+    );
+    if (!deleted) {
+      return Helper.fail(res, "No admin found!");
+    }
+    return Helper.success(res, " Admin deleted successfully", deleted);
+  }
+  catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
+}
 
-// const user = await adminModel.findOne(query);
+
+module.exports = {
+  registerAdmin,
+  loginAdmin,
+  verifyOTP,
+  updateAdmin,
+  removeAdmin
+
+};
+

@@ -1,13 +1,13 @@
 const UserModel = require("../models/userModel");
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper");
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
 const saltRounds = 10;
-async function getUserWithToken(userId) {
+async function getUserWithToken(userId, type) {
   try {
     let userDetail = await userProfile(userId);
     //userDetail.first_name + " " + userDetail.last_name, if we want to send then use it
-    const token = signInToken(userId);
+    const token = signInToken(userId, type);
     return { token: token, userDetail: userDetail };
   } catch (error) {
     console.log(error);
@@ -27,9 +27,9 @@ const userProfile = async (userId) => {
     return false;
   }
 };
-//for generating 6 digit random otp
+//for generating 4 digit random otp
 const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+    Math.floor(1000 + Math.random() * 9000).toString();
 //For creating user
 const registerUser = async (req, res) => {
   try {
@@ -68,6 +68,7 @@ const registerUser = async (req, res) => {
     if (phoneNo) {
       checkObj.$or.push({ phoneNo: phoneNo });
     }
+    // let userCheck = await UserModel.find(checkObj, {isDeleted: false});
     let userCheck = await UserModel.find(checkObj);
     if (userCheck.length > 0) {
       return Helper.fail(
@@ -105,14 +106,14 @@ const registerUser = async (req, res) => {
     //for hashing password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
     // Generate OTP
-    const otp = generateOTP();
+    // const otp = generateOTP();
+    const otp = "1234"
     const userObj = {
       email,
-      password,
       phoneNo,
       address,
       location,
-      password: hashedPassword,
+      password: hashedPassword ,
       otp: otp,
       referralCode: newReferralCode,
       referredBy,
@@ -129,7 +130,9 @@ const registerUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     let userId = req.userId;
-    const { email, phoneNo, password,address,location, } =
+    let type = req.type;
+    // console.log({type})
+    const { email, phoneNo, address, location } =
       req.body;
     if (!userId) {
       return Helper.fail(res, "userId is missing from request");
@@ -250,17 +253,11 @@ const findUserById = async (req, res) => {
 //for verifying OTP
 const verifyOTP = async (req, res) => {
   try {
-    const { email, number, otp } = req.body;
+    const { number, otp } = req.body;
     if (!otp) {
-      return Helper.fail(res, "  OTP are required");
+      return Helper.fail(res, " OTP are required");
     }
-    if (email) {
-      // Validating email format
-      const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-      if (!emailRegex.test(email)) {
-        return Helper.fail(res, "Email is not valid!");
-      }
-    }
+
     // Validating phone no.
     if (number) {
       const phoneRegex = /^\d{6,14}$/;
@@ -268,24 +265,20 @@ const verifyOTP = async (req, res) => {
         return Helper.fail(res, " Number is not valid!");
       }
     }
-    const user = await UserModel.findOne({
-      $or: [{ number: number }, { email: email }],
-      otp,
-    });
+    const user = await UserModel.findOne({ phoneNo: number, otp });
 
     if (!user) {
       return Helper.fail(res, "Invalid OTP");
     }
-    // generateOTP();
-    let newotp = "123456";
+    // let newotp = generateOTP();
+    let newotp = "1234";
     await UserModel.updateOne(
-      {
-        $or: [{ number: number }, { email: email }],
-      },
+      { number: number },
       { $set: { otp: newotp } }
     );
     // Generate JWT token and user details
-    const { token, userDetail } = await getUserWithToken(user._id);
+    const type = "user"
+    const { token, userDetail } = await getUserWithToken(user._id, type);
     if (!token || !userDetail) {
       return Helper.error("Failed to generate token or get user profile");
     }
@@ -298,7 +291,8 @@ const verifyOTP = async (req, res) => {
       );
       console.log(`100 points credited to referrer: ${user.referredBy}`);
     }
-
+    // send cookie
+    res.cookie("token", token)
     return Helper.success(res, "Token generated successfully.", {
       token,
       userDetail,
@@ -308,24 +302,23 @@ const verifyOTP = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+// resend OTP
 const resendOTP = async (req, res) => {
   try {
-    const { email, number } = req.body;
+    const { number } = req.body;
 
-    if (!email && !number) {
-      return Helper.fail(res, "Please provide an email or phone number.");
+    if (!number) {
+      return Helper.fail(res, "Please provide phone number.");
     }
-    // Find user using email or number
-    const user = await UserModel.findOne({
-      $or: [{ number }, { email }],
-    });
+    // Find user using or number
+    const user = await UserModel.findOne({phoneNo: number});
 
     if (!user) {
       return Helper.fail(res, "User not found!");
     }
     // Generate new OTP and set expiry
     // generateOTP();
-    const otp = 123456;
+    const otp = "1234";
     const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
     await UserModel.updateOne({ _id: user._id }, { $set: { otp, otpExpires } });
     return Helper.success(res, "OTP resent successfully.");
@@ -334,39 +327,115 @@ const resendOTP = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 //for user login
+// const loginUser = async (req, res) => {
+//   try {
+//     // const { phoneNo, email, password } = req.body;
+//     const { phoneNo } = req.body
+//     if (!password) {
+//       return Helper.fail(res, "Please enter password");
+//     }
+//     const query = {};
+//     if (phoneNo) {
+//       query.phoneNo = phoneNo;
+//     }
+//     const user = await UserModel.findOne({
+//       $or: [phoneNo ? { phoneNo } : null].filter(
+//         Boolean
+//       ),
+//     });
+
+//     // if (email) {
+//     //   query.email = email;
+//     // }
+//     // const user = await UserModel.findOne({
+//     //   $or: [phoneNo ? { phoneNo } : null, email ? { email } : null].filter(
+//     //     Boolean
+//     //   ),
+//     // });
+
+//     const otp = generateOTP();
+//     if (!user) {
+//       return Helper.fail(res, "User not found ");
+//     }
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return Helper.fail(res, "Invalid password");
+//     }
+//     return Helper.success(res, "Login successfull", user);
+//   } catch (error) {
+//     console.log(error);
+//     return Helper.fail(res, "Login failed");
+//   }
+// };
+
+// login using only phone number
 const loginUser = async (req, res) => {
   try {
-    const { phoneNo, email, password } = req.body;
-    if (!password) {
-      return Helper.fail(res, "Please enter password");
+    const { phoneNo } = req.body
+    if (!phoneNo) {
+      return Helper.fail(res, "phone number is required");
     }
     const query = {};
     if (phoneNo) {
       query.phoneNo = phoneNo;
     }
-    if (email) {
-      query.email = email;
-    }
     const user = await UserModel.findOne({
-      $or: [phoneNo ? { phoneNo } : null, email ? { email } : null].filter(
+      $or: [phoneNo ? { phoneNo } : null].filter(
         Boolean
       ),
+      isDeleted: false
     });
-    // const otp = generateOTP();
     if (!user) {
       return Helper.fail(res, "User not found ");
     }
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return Helper.fail(res, "Invalid password");
-    }
-    return Helper.success(res, "Login successfull", user);
-  } catch (error) {
+    // generateOTP();
+    const newotp = "1234";
+    user.otp = newotp;
+    await user.save();
+
+    // here code for send the otp to user's phone number
+    
+    return Helper.success(res, "OTP sent successfull");
+  } 
+  catch (error) {
     console.log(error);
-    return Helper.fail(res, "Login failed");
+    return Helper.fail(res, "failed to send OTP");
   }
 };
+
+// get user current location
+const getUserLocation = async (req, res) =>{
+  try {
+    const userId = req.userId;
+    const { newLocation } = req.body
+    const user = await UserModel.findById(userId)
+    if (!user) {
+      return Helper.fail(res, "user not found");
+    }
+    if(!newLocation){
+      return Helper.fail(res, "please select your location");
+    }
+    let updatedLocation =  await UserModel.findByIdAndUpdate(
+      userId,
+      {location : newLocation},
+      {
+        new: true,
+      }
+    );
+    console.log({updatedLocation})
+    if(!updatedLocation){
+      return Helper.fail(res, "user location not updated");
+    }
+    return Helper.success(res, "location updated successfully")
+  } 
+  catch (error) {
+    console.log(error)
+    return Helper.fail(res, "failed to update location");
+  }
+}
+
 module.exports = {
   registerUser,
   updateUser,
@@ -376,4 +445,5 @@ module.exports = {
   loginUser,
   verifyOTP,
   resendOTP,
+  getUserLocation
 };

@@ -24,9 +24,9 @@ const PartnerSchema = new mongoose.Schema({
         default: "",
     },
     location: {
-        type: String,
+        type: { lat: Number, lng: Number },
         required: true,
-        default: "",
+        default: {lat: 0, lng: 0},
     },
     image: {
         type: String,
@@ -63,6 +63,14 @@ const PartnerSchema = new mongoose.Schema({
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    isVerified: {
+        type: Boolean,
+        default: false
+    },
+    otp:{
+        type:String,
+        default: ""
     }
 }, 
  { timestamps: true },

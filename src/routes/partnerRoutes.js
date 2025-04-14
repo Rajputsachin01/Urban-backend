@@ -1,8 +1,18 @@
 const express = require("express");
 const router = express.Router();
-const { createPartner } = require("../controller/partnerController");
+const partnerController = require("../controller/partnerController");
+const {isAuth} = require("../utils/auth")
 
 /*--------------------------------user Routes-------------------------------*/
-router.post("/createPartner", createPartner)
+router.post("/createPartner", partnerController.createPartner)
+router.post("/deletePartner/:id", partnerController.deletePartner)
+router.post("/removePartner/:id", partnerController.removePartner)
+router.post("/verifyOtp", partnerController.verifyOTP)
+router.post("/resendOtp", partnerController.resendOTP)
+router.post("/loginPartner", partnerController.loginPartner)
+router.post("/partnerLocation", isAuth, partnerController.getPartnerLocation)
+router.post("/fetchProfile", isAuth, partnerController.fetchProfile)
+
+
 
 module.exports = router;
