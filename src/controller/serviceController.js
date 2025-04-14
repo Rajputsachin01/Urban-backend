@@ -1,4 +1,8 @@
 const ServiceModel = require("../models/serviceModel");
+<<<<<<< HEAD
+=======
+const { subscribe } = require("../routes/serviceRoutes");
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
 const Helper = require("../utils/helper")
 const mongoose = require("mongoose")
 mongoose.set("strictPopulate", false);
@@ -7,17 +11,30 @@ const createService = async (req, res) => {
 
   try {
     const {
+<<<<<<< HEAD
+=======
+      icon,
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
       name,
       size,
       price,
       time,
       images,
       description,
+<<<<<<< HEAD
       type,
       categories
     } = req.body;
     console.log(req.body);
 
+=======
+      type
+    } = req.body;
+    console.log(req.body);
+    if (!icon) {
+      return Helper.fail(res, "Icon is required!");
+    }
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     if (!name) {
       return Helper.fail(res, "Name is required!");
     }
@@ -39,18 +56,27 @@ const createService = async (req, res) => {
     if (!type) {
       return Helper.fail(res, "Type is required!");
     }
+<<<<<<< HEAD
     if (!categories) {
       return Helper.fail(res, "Categories is required!");
     }
       const data = {
+=======
+      const data = {
+        icon,
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         name,
         size,
         price,
         time,
         images,
         description,
+<<<<<<< HEAD
         type,
         categories
+=======
+        type
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
       };
       const create = await ServiceModel.create(data);
       if (!create) {
@@ -82,7 +108,11 @@ const removeService = async (req, res) => {
 
   }
 };
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
  const listingService = async (req, res) => {
   try {
     const { search, limit = 3, page = 1 } = req.body;
@@ -101,6 +131,7 @@ const removeService = async (req, res) => {
     }
     
     // Fetch paginated services matching the search criteria
+<<<<<<< HEAD
     // Aggregation pipeline
     const serviceList = await ServiceModel.aggregate([
       { $match: matchStage },
@@ -124,6 +155,16 @@ const removeService = async (req, res) => {
     const totalServices = await ServiceModel.countDocuments(matchStage);
     if (serviceList.length === 0) {
       return res.status(404).json({
+=======
+    const serviceList = await ServiceModel.find(matchStage)
+      // .populate('categories')
+      .skip(skip)
+      .limit(parseInt(limit));
+    // Fetch total count for pagination info
+    const totalServices = await ServiceModel.countDocuments(matchStage);
+    if (serviceList.length === 0) {
+      return Helper.fail({
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         success: false,
         message: "No service found matching the criteria"
       });
@@ -154,8 +195,12 @@ const updateService = async(req, res)=>{
       time,
       images,
       description,
+<<<<<<< HEAD
       type,
       categories } = req.body
+=======
+      type } = req.body
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     const isExist = await ServiceModel.findById(serviceId)
     if(isExist && isExist.isDeleted == true){
         return Helper.fail(res, "Service no longer exist")
@@ -185,9 +230,12 @@ const updateService = async(req, res)=>{
     if(type){
       updatedService.description = description
     }
+<<<<<<< HEAD
     if(categories){
       updatedService.categories = categories
     }
+=======
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     console.log(updatedService)
     const serviceUpdate = await ServiceModel.findByIdAndUpdate(
         serviceId,
@@ -206,6 +254,12 @@ const updateService = async(req, res)=>{
         return Helper.fail(res, "failed to update service");
   }
 };
+<<<<<<< HEAD
+=======
+
+
+
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
 module.exports = {
   createService,
   removeService,
@@ -216,3 +270,7 @@ module.exports = {
 
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f

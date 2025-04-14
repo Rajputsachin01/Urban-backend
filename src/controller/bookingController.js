@@ -1,4 +1,5 @@
 const BookingModel = require("../models/bookingModel")
+const UserModel = require("../models//userModel")
 const Helper = require("../utils/helper")
 
 // add booking

@@ -4,6 +4,7 @@ const Helper = require("../utils/helper")
 // create category
 const createCategory = async (req, res) =>{
     try {
+<<<<<<< HEAD
         const {icon, name, description, sellingType, size, price, seat, serviceId } = req.body
         console.log(name, description, sellingType, size, price, seat,serviceId )
         if(!icon) return Helper.fail(res, "Category icon is required")
@@ -11,17 +12,30 @@ const createCategory = async (req, res) =>{
         if(!description) return Helper.fail(res, "Category description is required")
         if(!sellingType) return Helper.fail(res, "Category sellingType is required")
         if(!serviceId) return Helper.fail(res, "Category serviceId is required")
+=======
+        const { name, description, sellingType, size, price, seat } = req.body
+        console.log(name, description, sellingType, size, price, seat)
+        if(!name) return Helper.fail(res, "Category name is required")
+        if(!description) return Helper.fail(res, "Category description is required")
+        if(!sellingType) return Helper.fail(res, "Category sellingType is required")
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         // check if category already exist
         const categoryCheck = await CategoryModel.findOne({name})
         if(categoryCheck){
             return Helper.fail(res, "category already exist")
         }
         const createCategory = await CategoryModel.create({
+<<<<<<< HEAD
             icon,
             name,
             description,
             sellingType,
             serviceId,
+=======
+            name,
+            description,
+            sellingType,
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
             size,
             price,
             seat
@@ -40,7 +54,11 @@ const createCategory = async (req, res) =>{
 const updateCategory = async (req, res) =>{
     try {
         const categoryId = req.params.id
+<<<<<<< HEAD
         const { icon, name, description, sellingType, size, price, seat } = req.body
+=======
+        const { name, description, sellingType, size, price, seat } = req.body
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         if(!categoryId){
             return Helper.fail(res, "category id is required")
         }
@@ -62,9 +80,12 @@ const updateCategory = async (req, res) =>{
         if(description){
             updateObj.description = description
         }
+<<<<<<< HEAD
         if(icon){
             updateObj.icon = icon
         }
+=======
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         if(sellingType){
             updateObj.sellingType = sellingType
         }
@@ -95,7 +116,11 @@ const updateCategory = async (req, res) =>{
 // find category by id
 const findCategoryById = async (req, res) =>{
     try {
+<<<<<<< HEAD
         const { id } = req.params
+=======
+        const {id} = req.params
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         if(!id){
             return Helper.fail(res, "categoryId is required")
         }
@@ -113,7 +138,11 @@ const findCategoryById = async (req, res) =>{
 // soft delete category
 const removeCategory = async (req, res) =>{
     try {
+<<<<<<< HEAD
         const { categoryId } = req.body;
+=======
+        const {categoryId} = req.body;
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         if(!categoryId){
             return Helper.fail(res, "category id required")
         }
@@ -174,6 +203,7 @@ const listingCategory = async (req, res) => {
       return Helper.fail(res, error.message);
     }
   };
+<<<<<<< HEAD
 
 // fetch categories for service
 const categoriesForService = async (req, res) =>{
@@ -194,6 +224,9 @@ const categoriesForService = async (req, res) =>{
         return Helper.fail(res, error.message);
     }
 }  
+=======
+  
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
 
 module.exports = {
     createCategory,
@@ -201,5 +234,8 @@ module.exports = {
     removeCategory,
     listingCategory,
     findCategoryById,
+<<<<<<< HEAD
     categoriesForService
+=======
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
 }

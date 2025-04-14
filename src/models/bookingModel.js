@@ -6,7 +6,11 @@ const BookingSchema = new mongoose.Schema({
         required: true
     },
     serviceId :{
+<<<<<<< HEAD
         type: mongoose.Schema.Types.ObjectId, ref: "service",
+=======
+        type: mongoose.Schema.Types.ObjectId, ref: "services",
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         required: true
     },
     categoryId :{
@@ -43,7 +47,11 @@ const BookingSchema = new mongoose.Schema({
     },
     bookingStatus: {
         type: String,
+<<<<<<< HEAD
         enum: ["Pending", "Cancelled", "Completed", "Progress"],
+=======
+        enum: ["Pending", "Cancelled", "Completed"],
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
         default: "Pending",
     },
     price: {

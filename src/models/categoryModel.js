@@ -14,10 +14,13 @@ const CategorySchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+<<<<<<< HEAD
     serviceId:{
         type: mongoose.Schema.Types.ObjectId,
         ref: "service",
     },
+=======
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     sellingType: {
         type: String,
         enum : ["sqft", "seat", "piece"],

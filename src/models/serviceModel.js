@@ -1,6 +1,13 @@
 const mongoose = require("mongoose")
 
 const ServiceSchema = new mongoose.Schema({
+<<<<<<< HEAD
+=======
+    icon: {
+        type: String,
+        default: "",
+    },
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     name: {
         type: String,
         required: true,
@@ -30,11 +37,14 @@ const ServiceSchema = new mongoose.Schema({
         required: true,
         default: "",
     },
+<<<<<<< HEAD
     categories: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'categories',
         required: true,
       }],
+=======
+>>>>>>> 9ba69b776c7b5df377048f98bfc07d3885daa17f
     isPublish: {
         type: Boolean,
         default: false
