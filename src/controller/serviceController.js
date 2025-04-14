@@ -1,4 +1,5 @@
 const ServiceModel = require("../models/serviceModel");
+const { subscribe } = require("../routes/serviceRoutes");
 const Helper = require("../utils/helper")
 const mongoose = require("mongoose")
 mongoose.set("strictPopulate", false);
@@ -7,17 +8,19 @@ const createService = async (req, res) => {
 
   try {
     const {
+      icon,
       name,
       size,
       price,
       time,
       images,
       description,
-      type,
-      categories
+      type
     } = req.body;
     console.log(req.body);
-
+    if (!icon) {
+      return Helper.fail(res, "Icon is required!");
+    }
     if (!name) {
       return Helper.fail(res, "Name is required!");
     }
@@ -39,18 +42,15 @@ const createService = async (req, res) => {
     if (!type) {
       return Helper.fail(res, "Type is required!");
     }
-    if (!categories) {
-      return Helper.fail(res, "Categories is required!");
-    }
       const data = {
+        icon,
         name,
         size,
         price,
         time,
         images,
         description,
-        type,
-        categories
+        type
       };
       const create = await ServiceModel.create(data);
       if (!create) {
@@ -82,7 +82,7 @@ const removeService = async (req, res) => {
 
   }
 };
-
+ 
  const listingService = async (req, res) => {
   try {
     const { search, limit = 3, page = 1 } = req.body;
@@ -101,29 +101,14 @@ const removeService = async (req, res) => {
     }
     
     // Fetch paginated services matching the search criteria
-    // Aggregation pipeline
-    const serviceList = await ServiceModel.aggregate([
-      { $match: matchStage },
-      {
-        $lookup: {
-          from: "categories",   // name of the categories collection
-          localField: "categories",   // field in ServiceModel
-          foreignField: "_id",       // _id in categories collection
-          as: "categoryDetails"
-        }
-      },
-      { $unwind: "$categoryDetails"},
-      { $skip: skip},
-      { $limit: limitVal}
-    ]);
-    // const serviceList = await ServiceModel.find(matchStage)
-    //   .populate('categories')
-    //   .skip(skip)
-    //   .limit(parseInt(limit));
+    const serviceList = await ServiceModel.find(matchStage)
+      // .populate('categories')
+      .skip(skip)
+      .limit(parseInt(limit));
     // Fetch total count for pagination info
     const totalServices = await ServiceModel.countDocuments(matchStage);
     if (serviceList.length === 0) {
-      return res.status(404).json({
+      return Helper.fail({
         success: false,
         message: "No service found matching the criteria"
       });
@@ -154,8 +139,7 @@ const updateService = async(req, res)=>{
       time,
       images,
       description,
-      type,
-      categories } = req.body
+      type } = req.body
     const isExist = await ServiceModel.findById(serviceId)
     if(isExist && isExist.isDeleted == true){
         return Helper.fail(res, "Service no longer exist")
@@ -185,9 +169,6 @@ const updateService = async(req, res)=>{
     if(type){
       updatedService.description = description
     }
-    if(categories){
-      updatedService.categories = categories
-    }
     console.log(updatedService)
     const serviceUpdate = await ServiceModel.findByIdAndUpdate(
         serviceId,
@@ -206,12 +187,16 @@ const updateService = async(req, res)=>{
         return Helper.fail(res, "failed to update service");
   }
 };
+
+
+
 module.exports = {
   createService,
   removeService,
   listingService,
   updateService
 };
+
 
 
 
