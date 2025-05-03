@@ -5,15 +5,12 @@ mongoose.set("strictPopulate", false);
 
 const createService = async (req, res) => {
   try {
-    const { name, size, price, time, images, description, type, categories } =
+    const { name, price, time, images, description, type, categories } =
       req.body;
     console.log(req.body);
 
     if (!name) {
       return Helper.fail(res, "Name is required!");
-    }
-    if (!size) {
-      return Helper.fail(res, "Size is required!");
     }
     if (!price) {
       return Helper.fail(res, "Price is required!");
@@ -35,7 +32,6 @@ const createService = async (req, res) => {
     }
     const data = {
       name,
-      size,
       price,
       time,
       images,
@@ -131,7 +127,7 @@ const removeService = async (req, res) => {
 const updateService = async (req, res) => {
   try {
     const serviceId = req.params.id;
-    const { name, size, price, time, images, description, type, categories } =
+    const { name, price, time, images, description, type, categories } =
       req.body;
     const isExist = await ServiceModel.findById(serviceId);
     if (isExist && isExist.isDeleted == true) {
@@ -143,9 +139,6 @@ const updateService = async (req, res) => {
     let updatedService = {};
     if (name) {
       updatedService.name = name;
-    }
-    if (size) {
-      updatedService.size = size;
     }
     if (price) {
       updatedService.price = price;
