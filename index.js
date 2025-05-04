@@ -28,6 +28,7 @@ const serviceRoutes = require("./src/routes/serviceRoutes")
 const categoryRoutes = require("./src/routes/categoryRoutes")
 const bookingRoutes = require("./src/routes/bookingRoutes")
 const offerRoutes = require("./src/routes/offerRoutes")
+const feedbackRoutes = require("./src/routes/feedbackRoutes")
 
 
 app.use("/v1/admin",adminRoutes);
@@ -39,6 +40,8 @@ app.use("/v1/service",serviceRoutes);
 app.use("/v1/category",categoryRoutes);
 app.use("/v1/booking",bookingRoutes);
 app.use("/v1/offer",offerRoutes);
+app.use("/v1/feedback",feedbackRoutes);
+
 
 
 //server creating

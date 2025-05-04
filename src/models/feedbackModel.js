@@ -1,13 +1,21 @@
 const mongoose = require("mongoose")
 
-const OfferSchema = new mongoose.Schema({
+const feedbackSchema = new mongoose.Schema({
     serviceId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "service",
     },
-    adminId: {
+    userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "admin",
+        ref: "user",
+    },
+    rating: {
+        type: Number,
+        required: true,
+    },
+    review: {
+        type: String,
+        required: true,
     },
     isDeleted: {
         type: Boolean,
@@ -17,4 +25,4 @@ const OfferSchema = new mongoose.Schema({
  { timestamps: true },
 );
 
-module.exports = mongoose.model("offer", OfferSchema);
+module.exports = mongoose.model("feedback", feedbackSchema);
