@@ -172,13 +172,30 @@ const listingBanner = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+const fetchAllBanners = async (req, res) => {
+    try {     
+        const bannerList = await BannerModel.find({ isDeleted: false });
+        
+        if (bannerList.length === 0) {
+            return Helper.fail(res, "No banners found");
+        }
+  
+        return Helper.success(res, "Banners fetched successfully", bannerList);
+    } 
+    catch (error) {
+      console.log(error);
+      return Helper.fail(res, error.message);
+    }
+  };
+  
 
 module.exports = {  
     createBanner,
     deleteBanner,
     removeBanner,
     listingBanner,
-    updateBanner
+    updateBanner,
+    fetchAllBanners
 };
 
 
