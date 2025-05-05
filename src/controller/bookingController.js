@@ -98,51 +98,42 @@ const fetchUserBooking = async (req, res) =>{
         return Helper.fail(res, "failed to fetch")
     }
 }
-// booking history
-const userBookingHistory = async (req, res) =>{
-    try {
-        const userId = req.userId 
-        if(!userId){
-            return Helper.fail(res, "user id is required")
+// booking history and pending 
+const userBookingHistoryOrPanding = async (req, res) =>{
+        try {
+            const userId = req.userId 
+            const { type } = req.body
+            if(!type){
+                return Helper.fail(res, "type is required")
+            }
+            if(!userId){
+                return Helper.fail(res, "user id is required")
+            }
+            let query
+            if(type === "history" || type === "History"){
+            // query = { isDeleted: false, bookingStatus: "Cancelled" || "Completed" }
+            query = { isDeleted: false, bookingStatus: { $in: ["Cancelled", "Completed"] }}
+            }
+            if(type === "pending" || type === "Pending"){
+                query = { isDeleted: false, bookingStatus: { $in: ["Pending", "Cancelled", "Progress"]}}
+            }
+            const result = await BookingModel.find({userId, ...query})
+            .select("-createdAt -updatedAt -isDeleted -__v")
+            .populate("userId", "email phoneNo -_id ")
+            .populate("serviceId", "name price -_id")
+            .populate("categoryId", "name price -_id")
+            .populate("partnerId", "name phoneNo -_id")
+            if(!result){
+                return Helper.fail(res, "no result available")
+            }
+            return Helper.success(res, "result fetched", result)
+    
+        } catch (error) {
+            console.log(error)
+            return Helper.fail(res, "failed to fetch result")
         }
-        // query = { isDeleted: false, bookingStatus: "Cancelled" || "Completed" }
-        const query = { isDeleted: false, bookingStatus: { $in: ["Cancelled", "Completed"] }}
-        const history = await BookingModel.find({userId, ...query})
-        console.log(history)
-        if(!history){
-            return Helper.fail(res, "no history available")
-        }
-        return Helper.success(res, "history fetched",history )
+    }
 
-    } catch (error) {
-        console.log(error)
-        return Helper.fail(res, "failed to fetch history")
-    }
-}
-// booking panding
-const userBookingPanding = async (req, res) =>{
-    try {
-        const userId  = req.userId
-        if(!userId){
-            return Helper.fail(res, "userId is required")
-        }
-        // ["Pending", "Cancelled", "Completed"]
-        const query = { isDeleted: false, bookingStatus: { $in: ["Pending", "Cancelled", "Progress"]}}
-        const pandingBookings = await BookingModel.find({userId, ...query})
-        .select("-createdAt -updatedAt -isDeleted -__v")
-        .populate("userId", "email phoneNo -_id ")
-        .populate("serviceId", "name price -_id")
-        .populate("categoryId", "name price -_id")
-        .populate("partnerId", "name phoneNo -_id")
-        if(!pandingBookings){
-            return Helper.fail(res, "no any booking available")
-        }
-        return Helper.success(res, "user panding bookings fetched", pandingBookings)
-    } catch (error) {
-        console.log(error)
-        return Helper.fail(res, error.message)
-    }
-}
 // cancel booking
 const cancelBooking = async (req, res) =>{
     try {
@@ -181,6 +172,43 @@ const findBookingById = async (req, res) =>{
         return Helper.fail(res, error.message)
     }
 }
+// fetch all users who have booking
+const usersBookingListing = async (req, res) => {
+    try {
+        
+        const { limit = 3, page = 1 } = req.body;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        let matchStage = { isDeleted: false };
+        const userBookedList = await BookingModel.find(matchStage)
+        .populate("userId", "name email phoneNo ")
+            .skip(skip)
+            .limit(parseInt(limit));
+        const totalBookedUsers = await BookingModel.countDocuments(matchStage);
+        if (userBookedList.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: "No users booking found matching the criteria",
+            });
+        }
+            const data = {
+                users: userBookedList,
+                pagination: {
+                    totalBookedUsers,
+                    totalPages: Math.ceil(totalBookedUsers / limit),
+                    currentPage: parseInt(page),
+                    limit: parseInt(limit),
+                },
+            };
+
+            return Helper.success(res, "users listing fetched", data);
+        
+    }
+    catch (error) {
+            console.log(error)
+            return Helper.fail(res, "failed to fetch users booking listing")
+        }
+    }
+
 // assigning the partner
 // const assignPartner = async (req, res) =>{
 
@@ -197,8 +225,9 @@ module.exports = {
     removeBooking,
     updateBooking,
     fetchUserBooking,
-    userBookingHistory,
-    userBookingPanding,
+    userBookingHistoryOrPanding,
     cancelBooking,
-    findBookingById
+    findBookingById,
+    usersBookingListing,
+    fetchTimeSlots
 }
