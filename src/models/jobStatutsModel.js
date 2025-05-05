@@ -1,25 +1,23 @@
 const mongoose = require("mongoose")
 
-const BannerSchema = new mongoose.Schema({
-    title: {
+const JobStatusSchema = new mongoose.Schema({
+    partnerId: {
         type: String,
         required: true,
         default: "",
     },
-    description: {
+    serviceId: {
         type: String,
         required: true,
         default: "",
     },
-    image: {
+    beforeImage: {
         type: String,
         required: true,
-        default: "",
     },
-    type: {
+    afterImage: {
         type: String,
         required: true,
-        default: "",
     },
     isDeleted: {
         type: Boolean,
@@ -28,4 +26,4 @@ const BannerSchema = new mongoose.Schema({
 }, 
  { timestamps: true },
 );
-module.exports = mongoose.model("banner", BannerSchema);
+module.exports = mongoose.model("jobStatus", JobStatusSchema);
