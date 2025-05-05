@@ -14,6 +14,8 @@ router.post("/partnerLocation", isAuth, partnerController.getPartnerLocation)
 router.post("/fetchProfile", isAuth, partnerController.fetchProfile)
 router.post("/partnerListing", partnerController.partnerListing)
 router.post("/partnerListingServices", isAuth, partnerController.partnerListingWithServices)
+router.post("/orderAnalytics", isAuth, partnerController.myAnalytics)
+router.post("/requestOrdersList", isAuth, partnerController.requestOrdersList)
 
 
 
