@@ -1,5 +1,6 @@
 const BookingModel = require("../models/bookingModel")
 const Helper = require("../utils/helper")
+const moment = require("moment");
 
 // add booking
 const addBooking = async (req, res) =>{
@@ -209,10 +210,51 @@ const usersBookingListing = async (req, res) => {
         }
     }
 
-// assigning the partner
-// const assignPartner = async (req, res) =>{
+// utility function for time slot
+const generateTimeSlots = (startTime, endTime, duration) => {
+  const slots = [];
+  let start = moment(startTime, "HH:mm");
+  const end = moment(endTime, "HH:mm");
 
-// }
+  while (start.clone().add(duration, "minutes").isSameOrBefore(end)) {
+    const slotStart = start.format("hh:mm A");
+    const slotEnd = start.clone().add(duration, "minutes").format("hh:mm A");
+    slots.push(`${slotStart} - ${slotEnd}`);
+    start.add(duration, "minutes");
+  }
+
+  return slots;
+};
+// set the time slot between 9:00 AM to 6:00 PM
+const fetchTimeSlots = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+
+    if (!bookingId) {
+      return Helper.fail(res, "Booking ID is required");
+    }
+
+    // Fetch booking and populate the service to get the time
+    const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
+      .populate("serviceId", "time");
+
+    if (!booking || !booking.serviceId || !booking.serviceId.time) {
+      return Helper.fail(res, "Service time not found in booking");
+    }
+
+    const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
+    const businessStart = "09:00";
+    const businessEnd = "18:00";
+
+    const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
+
+    return Helper.success(res, "Time slots generated", timeSlots);
+  } catch (error) {
+    console.error(error);
+    return Helper.fail(res, "Failed to generate time slots");
+  }
+};
+
 
 
 
