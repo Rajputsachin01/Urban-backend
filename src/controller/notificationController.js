@@ -1,6 +1,5 @@
 const NotificationModel = require("../models/notificationModel")
 const Helper = require("../utils/helper")
-
 const createNotification = async (req, res) =>{
     try {
         const { title, description, userId } = req.body
@@ -27,7 +26,6 @@ const createNotification = async (req, res) =>{
         return Helper.fail(res, "failed to create notification")
     }
 }
-
 // lising notifications
 const listingNotrification = async (req, res) => {
     try {

@@ -26,4 +26,5 @@ router.post("/usersBookingListing",isAuth, usersBookingListing)
 router.post("/fetchTimeSlots",isAuth, fetchTimeSlots)
 router.post("/assignPartner",isAuth, assignPartner)
 
+
 module.exports = router;

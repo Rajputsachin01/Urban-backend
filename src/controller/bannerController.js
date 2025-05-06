@@ -188,7 +188,6 @@ const fetchAllBanners = async (req, res) => {
       return Helper.fail(res, error.message);
     }
   };
-  
 
 module.exports = {  
     createBanner,

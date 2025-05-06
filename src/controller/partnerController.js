@@ -1,6 +1,7 @@
 const PartnerModel = require("../models/partnerModel")
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper")
+const BookingModel = require("../models/bookingModel")
 
 async function getPartnerWithToken(partnerId, type) {
   try {
@@ -423,6 +424,91 @@ catch(error){
 }
 }
 
+const myAnalytics = async (req, res) => {     // for calculating runnig and request orders
+    try {
+      const  partnerId  = req.userId;
+      
+      if (!partnerId) {
+        return Helper.fail(res, "Partner ID is required");
+      }
+  
+      const runningOrderCount = await BookingModel.countDocuments({
+        partnerId: partnerId,
+        bookingStatus: 'Progress',
+      });
+      // Count Request Orders (bookingStatus: 'Pending')
+    const requestOrderCount = await BookingModel.countDocuments({
+        partnerId: partnerId,
+        bookingStatus: 'Pending',
+      });
+  
+      // If both are zero, you can return a message or still return 0 values
+    if (runningOrderCount === 0 && requestOrderCount === 0) {
+        return Helper.fail(res, "No running or request orders found");
+      }
+  
+      return Helper.success(res, "Partner order analytics", {
+        runningOrders: runningOrderCount,
+        requestOrders: requestOrderCount,
+      });
+
+    } catch (error) {
+      return Helper.fail(res, error.message);
+    }
+  };
+
+const requestOrdersList = async (req, res) => {
+    try {
+      const partnerId = req.userId;
+  
+      if (!partnerId) {
+        return Helper.fail(res, "Partner ID is required");
+      }
+  
+      // If partnerId is stored as ObjectId in BookingModel, convert it:
+      // const partnerObjectId = new mongoose.Types.ObjectId(partnerId);
+  
+      const requestOrders = await BookingModel.find({
+        partnerId: partnerId, // or use `partner: partnerId` if that's the field name
+        bookingStatus: 'Pending',
+      });
+  
+      if (!requestOrders || requestOrders.length === 0) {
+        return Helper.fail(res, "No request orders found");
+      }
+  
+      return Helper.success(res, "Request orders list", requestOrders);
+  
+    } catch (error) {
+      return Helper.fail(res, error.message);
+    }
+  };
+
+//   const requestOrders = async (req, res) => {     // for calculating runnig orders
+//     try {
+//       const  partnerId  = req.params.id;
+      
+//       if (!partnerId) {
+//         return Helper.fail(res, "Partner ID is required");
+//       }
+  
+//       const requestOrderCount = await BookingModel.countDocuments({
+//         partnerId: partnerId,
+//         bookingStatus: 'Pending',
+//       });
+  
+//       if (requestOrderCount === 0) {
+//         return Helper.fail(res, "No request orders found");
+//       }
+  
+//       return Helper.success(res, "Request orders count", { requestOrders: requestOrderCount });
+//     } catch (error) {
+//       return Helper.fail(res, error.message);
+//     }
+//   };
+  
+
+
 module.exports = {
   createPartner,
   deletePartner,
@@ -433,5 +519,7 @@ module.exports = {
   getPartnerLocation,
   fetchProfile,
   partnerListing,
-  partnerListingWithServices
+  partnerListingWithServices,
+  myAnalytics,
+  requestOrdersList
 };
