@@ -10,7 +10,8 @@ const {
     cancelBooking,
     findBookingById,
     usersBookingListing,
-    fetchTimeSlots
+    fetchTimeSlots,
+    assignPartner
 } = require("../controller/bookingController")
 
 /*--------------------------------user Routes-------------------------------*/
@@ -23,5 +24,6 @@ router.post("/cancel/:id",isAuth, cancelBooking)
 router.post("/findById/:id",isAuth, findBookingById)
 router.post("/usersBookingListing",isAuth, usersBookingListing)
 router.post("/fetchTimeSlots",isAuth, fetchTimeSlots)
+router.post("/assignPartner",isAuth, assignPartner)
 
 module.exports = router;

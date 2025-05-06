@@ -210,9 +210,16 @@ const usersBookingListing = async (req, res) => {
     }
 
 // assigning the partner
-// const assignPartner = async (req, res) =>{
-
-// }
+const assignPartner = async (req, res) =>{
+    const { bookingId } = req.body
+    if(!bookingId){
+        return Helper.fail(res, "booking id is required")
+    }
+    const booking = await BookingModel.findOne({isDeleted: false, _id: bookingId })
+    .populate("userId", "location")
+    // .populate("partnerId")
+    console.log(booking.userId.location)
+}
 
 
 const moment = require("moment");
@@ -272,5 +279,6 @@ module.exports = {
     cancelBooking,
     findBookingById,
     usersBookingListing,
-    fetchTimeSlots
+    fetchTimeSlots,
+    assignPartner
 }
