@@ -4,11 +4,12 @@ const Helper = require("../utils/helper")
 //For creating banner
 const createBanner = async (req, res) =>{
     try{
-      const { title, type, description } = req.body
+      const { title, type, description, image } = req.body
 
       if(!title) return Helper.fail(res, "title field is required")
       if(!type) return Helper.fail(res, "type field is required")
       if(!description) return Helper.fail(res, "description field is required")
+      if(!image) return Helper.fail(res, "image field is required")
   
     // //   upload banner immages locally
     //   const files = req.files; // array of files
@@ -23,7 +24,7 @@ const createBanner = async (req, res) =>{
           title,
           type,
           description,
-        //   images:bannerLocalPath   
+          image  
       })
       if(!bannerCreated){
           return Helper.fail(res, "banner not created")
@@ -36,12 +37,11 @@ const createBanner = async (req, res) =>{
 
     }
 };
-
 // update Banner details
 const updateBanner = async(req, res)=>{
   try {
     const bannerId = req.params.id
-    const { title, type, description } = req.body
+    const { title, type, description, image } = req.body
     const isExist = await BannerModel.findById(bannerId)
     if(isExist && isExist.isDeleted == true){
         return Helper.fail(res, "Banner no longer exist")
@@ -58,6 +58,9 @@ const updateBanner = async(req, res)=>{
     }
     if(description){
         updatedBanner.description = description
+    }
+    if(image){
+        updatedBanner.image = image
     }
     // console.log(updatedBanner)
     const bannerUpdate = await BannerModel.findByIdAndUpdate(
@@ -77,7 +80,6 @@ const updateBanner = async(req, res)=>{
         return Helper.fail(res, "failed to update banner");
   }
 }
-
 // Delete banner permanantly
 const deleteBanner = async (req,res) =>{
   try {
@@ -95,7 +97,6 @@ const deleteBanner = async (req,res) =>{
     return Helper.fail(res, error.message);
 }
 };
-
 // Banner soft delete
 const removeBanner = async (req,res) =>{
     try{
@@ -121,7 +122,6 @@ const removeBanner = async (req,res) =>{
 
     }
 };
-
 // listing banner 
 const listingBanner = async (req, res) => {
   try {
@@ -172,6 +172,7 @@ const listingBanner = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+// fetch all banners
 const fetchAllBanners = async (req, res) => {
     try {     
         const bannerList = await BannerModel.find({ isDeleted: false });
