@@ -133,7 +133,7 @@ const userBookingHistoryOrPanding = async (req, res) =>{
             console.log(error)
             return Helper.fail(res, "failed to fetch result")
         }
-    }
+}
 
 // cancel booking
 const cancelBooking = async (req, res) =>{
