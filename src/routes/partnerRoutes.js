@@ -17,6 +17,7 @@ router.post("/partnerListingServices", isAuth, partnerController.partnerListingW
 router.post("/orderAnalytics", isAuth, partnerController.myAnalytics)
 router.post("/requestOrdersList", isAuth, partnerController.requestOrdersList)
 router.post("/myEarnings", isAuth, partnerController.fetchPartnerAnalytics)
+router.post("/recentJobs", isAuth, partnerController.listRecentJobs)
 
 
 
