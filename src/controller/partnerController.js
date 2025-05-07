@@ -2,6 +2,8 @@ const PartnerModel = require("../models/partnerModel")
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper")
 const BookingModel = require("../models/bookingModel")
+// const mongoose = require('mongoose');
+const { ObjectId } = require('mongodb');
 
 async function getPartnerWithToken(partnerId, type) {
   try {
@@ -484,6 +486,59 @@ const requestOrdersList = async (req, res) => {
     }
   };
 
+const fetchPartnerAnalytics = async (req, res) => {
+  try {
+    const partnerId = req.userId;
+    if (!partnerId) {
+      return Helper.fail(res, "Partner ID is required");
+    }
+
+    // 1) Cast to ObjectId so Mongo can match correctly
+    const partnerObjectId = new ObjectId(partnerId);
+
+
+    // 2) Aggregate safely with a default of 0
+    const [ { totalAmount: Earnings = 0,
+              completedJobs: CompletedJobs = 0,
+     } = {} ] = 
+      await BookingModel.aggregate([
+        {
+          $match: {
+            partnerId:     partnerObjectId,  
+            bookingStatus: 'Completed',      
+          }
+        },
+        {
+          $group: {
+            _id:         null,
+            totalAmount: { $sum: '$totalPrice' },  
+            completedJobs: { $sum: 1 }
+          }
+        }
+      ]);
+
+const [ { totalAmount: PendingEarnings = 0 } = {} ] = 
+      await BookingModel.aggregate([
+        { $match: { partnerId: partnerObjectId, bookingStatus: 'Pending' } },
+        { $group: {
+            _id: null,
+            totalAmount: { $sum: '$totalPrice' }
+        } }
+      ]);
+    // 3) Respond with the total
+    return Helper.success(res, "Partner Earning Analytics", {
+      TotalEarnings: Earnings,
+      completedJobs:  CompletedJobs,
+      PendingEarnings:  PendingEarnings
+    });
+
+  } catch (error) {
+    return Helper.fail(res, error.message);
+  }
+};
+
+  
+
 //   const requestOrders = async (req, res) => {     // for calculating runnig orders
 //     try {
 //       const  partnerId  = req.params.id;
@@ -521,5 +576,6 @@ module.exports = {
   partnerListing,
   partnerListingWithServices,
   myAnalytics,
-  requestOrdersList
+  requestOrdersList,
+  fetchPartnerAnalytics
 };
