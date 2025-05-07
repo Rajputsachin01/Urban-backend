@@ -3,7 +3,7 @@ const Helper = require("../utils/helper")
 
 const createJobStatus = async (req, res) => {
     try {
-        const { partnerId, serviceId, beforeImage, afterImage } = req.body
+        const { partnerId, serviceId, beforeImage, afterImage, notes } = req.body
         if (!partnerId) {
             return Helper.fail(res, "partner id is required")
         }
@@ -20,7 +20,8 @@ const createJobStatus = async (req, res) => {
             partnerId,
             serviceId,
             beforeImage,
-            afterImage
+            afterImage,
+            notes
         })
         if (!jobStatus) {
             return Helper.fail(res, "job status not created")
@@ -63,7 +64,7 @@ const listingJobStatus = async (req, res) => {
 
         return Helper.success(res, "users listing fetched", data);
     } catch (error) {
-
+        return Helper.fail(res, "failed to listing job status")
     }
 }
 

@@ -256,7 +256,6 @@ const findBookingById = async (req, res) =>{
 // fetch all users who have booking
 const usersBookingListing = async (req, res) => {
     try {
-        
         const { limit = 3, page = 1 } = req.body;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         let matchStage = { isDeleted: false };
