@@ -181,7 +181,7 @@ const fetchUserBooking = async (req, res) =>{
     }
 }
 // booking history and pending 
-const userBookingHistoryOrPanding = async (req, res) =>{
+const userBookingHistoryOrPending = async (req, res) =>{
         try {
             const userId = req.userId 
             const { type } = req.body
@@ -355,7 +355,7 @@ module.exports = {
     removeBooking,
     updateBooking,
     fetchUserBooking,
-    userBookingHistoryOrPanding,
+    userBookingHistoryOrPending,
     cancelBooking,
     findBookingById,
     usersBookingListing,

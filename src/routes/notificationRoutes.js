@@ -5,13 +5,13 @@ const { isAuth } = require("../utils/auth");
 const {
     createNotification,
     listingNotification,
-    isReadNotification
+    readNotification
 } = require("../controller/notificationController")
 
 
 /*--------------------------------user Routes-------------------------------*/
 router.post("/createNotification", isAuth, createNotification)
 router.post("/listingNotification", isAuth, listingNotification)
-router.post("/isReadNotification", isAuth, isReadNotification)
+router.post("/readNotification", isAuth, readNotification)
 
 module.exports = router

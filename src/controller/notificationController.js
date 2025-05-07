@@ -96,7 +96,7 @@ const listingNotification = async (req, res) => {
 }
 
 // notification isRead
-const isReadNotification = async (req, res) =>{
+const readNotification = async (req, res) =>{
     try {
         const { notificationId } = req.body
         if(!notificationId){
@@ -117,5 +117,5 @@ const isReadNotification = async (req, res) =>{
 module.exports = {
     createNotification,
     listingNotification,
-    isReadNotification
+    readNotification
 }
