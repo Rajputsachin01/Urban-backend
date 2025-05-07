@@ -1,4 +1,5 @@
 const BookingModel = require("../models/bookingModel")
+const PartnerModel = require("../models/partnerModel")
 const Helper = require("../utils/helper")
 const moment = require("moment");
 // helper function  for time slot
@@ -17,38 +18,104 @@ const generateTimeSlots = (startTime, endTime, duration) => {
     return slots;
 };
 // add booking
-const addBooking = async (req, res) =>{
+// const addBooking = async (req, res) =>{
+//     try {
+//         const userId = req.userId
+//         const { serviceId, categoryId, partnerId,  address, location, date, timeSlot,  paymentMode } = req.body
+//         if(!serviceId || !categoryId ||  !address || !partnerId|| !location || !date || !timeSlot || !paymentMode){
+//             return Helper.fail(res, "All fields are required")
+//         }
+//         console.log(req.body)
+//         const booking = await BookingModel.create({
+//             userId,
+//             serviceId,
+//             categoryId,
+//             partnerId,
+//             address,
+//             location,
+//             date,
+//             timeSlot,
+//             paymentMode,
+//             bookingStatus: "Pending",
+//             price: 0,
+//             discountAmount: 0,
+//             totalPrice: 0,
+//             paymentStatus: "Pending"
+//         })
+//         if(!booking){
+//             return Helper.fail(res, "booking failed")
+//         }
+//         return Helper.success(res, "booking successfull", booking)
+//     } catch (error) {
+//         console.log(error)
+//         return Helper.fail(res, error.message)
+//     }
+// }
+// initiate Booking
+const initiateBooking = async (req, res) =>{
     try {
         const userId = req.userId
-        const { serviceId, categoryId, partnerId,  address, location, date, timeSlot,  paymentMode } = req.body
-        if(!serviceId || !categoryId ||  !address || !partnerId|| !location || !date || !timeSlot || !paymentMode){
-            return Helper.fail(res, "All fields are required")
+        const { serviceId, categoryId, unitQuantity } = req.body
+        if(!userId){
+            return Helper.fail(res, "user id is required")
         }
-        console.log(req.body)
+        if(!serviceId){
+            return Helper.fail(res, "service id is required")
+        }
+        if(!categoryId){
+            return Helper.fail(res, "category id is required")
+        }
+        if (!unitQuantity || unitQuantity <= 0)
+            return Helper.fail(res, "Valid unit quantity is required")
         const booking = await BookingModel.create({
             userId,
             serviceId,
-            categoryId,
-            partnerId,
-            address,
-            location,
-            date,
-            timeSlot,
-            paymentMode,
-            bookingStatus: "Pending",
-            price: 0,
-            discountAmount: 0,
-            totalPrice: 0,
-            paymentStatus: "Pending"
-        })
+            categoryId
+        }) 
         if(!booking){
-            return Helper.fail(res, "booking failed")
+            return Helper.fail(res, "booking not initiate")
         }
-        return Helper.success(res, "booking successfull", booking)
+        const categoryPrice = await BookingModel.findOne({categoryId: categoryId, _id: booking._id})
+        .populate("categoryId", "price")
+        const calculatePrice = categoryPrice.categoryId.price
+        const finalPrice = unitQuantity*calculatePrice
+        // remaining: need to fetch the discount amount
+        const totalPrice = finalPrice - booking.discountAmount
+        booking.totalPrice = totalPrice
+        booking.price = finalPrice;
+        await booking.save();
+        return Helper.success(res, "booking intiated", booking)
     } catch (error) {
         console.log(error)
-        return Helper.fail(res, error.message)
+        return Helper.fail(res, "failed to booking initiate")
     }
+}
+// get location and address
+const getLocationAndAddress = async (req, res) =>{
+    try {
+        const { location , address, bookingId } = req.body
+        if(!bookingId){
+            return Helper.fail(res, "bookingId is required")
+        }
+        if(!location){
+            return Helper.fail(res, "location is required")
+        }
+        if(!address){
+            return Helper.fail(res, "address is required")
+        }
+        const setLocation = await BookingModel.findOneAndUpdate(
+            { _id: bookingId, isDeleted: false },
+            { $set: { location, address } },
+            { new: true }
+        );
+        if (!setLocation) {
+            return Helper.fail(res, "Booking not found or already deleted");
+        }
+        return Helper.success(res, "Booking location and address updated", setLocation);
+    } catch (error) {
+        return Helper.fail(res, "failed to add location and address")
+    }
+
 }
 // update booking
 const updateBooking = async (req, res) =>{
@@ -251,9 +318,41 @@ const fetchTimeSlots = async (req, res) => {
       return Helper.fail(res, "Failed to generate time slots");
     }
 };
+// get date and time slot
+const getDateAndTimeslot = async (req, res) =>{
+    try {
+        const {date, timeSlot, bookingId } = req.body
+        if(!bookingId){
+            return Helper.fail(res, "bookingId is required")
+        }
+        if(!date){
+            return Helper.fail(res, "date is required")
+        }
+        if(!timeSlot){
+            return Helper.fail(res, "timeSlot is required")
+        }
+        const dateAndTime = await BookingModel.findOneAndUpdate(
+            { _id: bookingId, isDeleted: false },
+            { $set: { date, timeSlot } },
+            { new: true }
+        );
+        if (!dateAndTime) {
+            return Helper.fail(res, "Booking not found or already deleted");
+        }
+        return Helper.success(res, "Booking date and time updated", dateAndTime);
+        
+    } catch (error) {
+        return Helper.fail(res, "failed to add date and time slot");
+    }
+
+
+}
+
 
 module.exports = {
-    addBooking,
+    initiateBooking,
+    getDateAndTimeslot,
+    // addBooking,
     removeBooking,
     updateBooking,
     fetchUserBooking,
@@ -261,5 +360,6 @@ module.exports = {
     cancelBooking,
     findBookingById,
     usersBookingListing,
-    fetchTimeSlots
+    fetchTimeSlots,
+    getLocationAndAddress
 }

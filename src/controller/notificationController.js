@@ -1,8 +1,17 @@
 const NotificationModel = require("../models/notificationModel")
 const Helper = require("../utils/helper")
+
 const createNotification = async (req, res) =>{
     try {
-        const { title, description, userId } = req.body
+        const userId = req.userId
+        const type = req.type
+        const {icon, title, description} = req.body
+        if(!userId){
+            return Helper.fail(res, "userId is required")
+        }
+        if(!type){
+            return Helper.fail(res, "type required")
+        }
         if(!title){
             return Helper.fail(res, "title is required")
         }
