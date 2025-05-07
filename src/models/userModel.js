@@ -29,14 +29,25 @@ const UserSchema = new mongoose.Schema(
       default: "",
     },
     address: {
-      type: String,
+      type: [String],
       required: true,
-      default: "",
+      default: [],
     },
+    
     location: {
-      type: { lat: Number, lng: Number },
-      required: true,
+      type: {
+        type: String,
+        enum: ['Point'],
+        required: true,
+        default: 'Point'
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+        default: [0, 0]
+      }
     },
+    
     referralCode: {
       type: String,
       default: "",
@@ -50,21 +61,6 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// For passswrod Hash
-// UserSchema.pre("save", async function (next) {
-//   if (!this.isModified("password")) {
-//     console.log("Password not modified, skipping hashing.");
-//     return next();
-//   }
-//   try {
-//     const salt = await bcrypt.genSalt(10);
-//     this.password = await bcrypt.hash(this.password, salt);
-//     console.log("Password hashed successfully.");
-//     next();
-//   } catch (error) {
-//     console.error("Error hashing password:", error);
-//     next(error);
-//   }
-// });
+UserSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("users", UserSchema);

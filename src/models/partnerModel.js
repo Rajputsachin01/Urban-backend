@@ -24,10 +24,19 @@ const PartnerSchema = new mongoose.Schema({
         default: "",
     },
     location: {
-        type: { lat: Number, lng: Number },
-        required: true,
-        default: {lat: 0, lng: 0},
-    },
+        type: {
+          type: String,
+          enum: ['Point'],
+          required: true,
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number], 
+          required: true,
+          default: [0, 0]
+        }
+      },      
+
     image: {
         type: String,
         default: "",
@@ -79,5 +88,6 @@ const PartnerSchema = new mongoose.Schema({
 }, 
  { timestamps: true },
 );
+PartnerSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("partner", PartnerSchema);

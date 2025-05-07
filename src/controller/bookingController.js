@@ -347,8 +347,102 @@ const getDateAndTimeslot = async (req, res) =>{
 
 
 }
-
-
+// Auto-assign partner based on user's location
+const autoAssignPartner = async (req, res) => {
+    try {
+      const { bookingId } = req.body;
+  
+      const booking = await BookingModel.findById(bookingId).populate("userId");
+      if (!booking) return Helper.fail(res, "Booking not found");
+  
+      const user = booking.userId;
+      if (!user || !user.location || !user.location.coordinates) {
+        return Helper.fail(res, "User location not found");
+      }
+  
+      const nearestPartner = await PartnerModel.findOne({
+        isDeleted: false,
+        autoAssign: true,
+        location: {
+          $near: {
+            $geometry: {
+              type: "Point",
+              coordinates: user.location.coordinates,
+            },
+            $maxDistance: 10000 // in meters (10 km)
+          }
+        }
+      });
+  
+      if (!nearestPartner) {
+        return Helper.fail(res, "No auto-assign partner found nearby");
+      }
+  
+      booking.partnerId = nearestPartner._id;
+      booking.status = "assigned";
+      await booking.save();
+  
+      return Helper.success(res, "Partner auto-assigned successfully", booking);
+    } catch (err) {
+      console.error(err);
+      return Helper.error(res, "Something went wrong");
+    }
+  };
+  
+ // Get sorted list of nearby partners for manual assignment (admin - based on bookingId)
+const getNearbyPartners = async (req, res) => {
+    try {
+      const { bookingId } = req.body;
+      const booking = await BookingModel.findById(bookingId).populate("userId");
+      if (!booking) return Helper.fail(res, "Booking not found");
+      const user = booking.userId;
+      if (!user || !user.location || !user.location.coordinates) {
+        return Helper.fail(res, "User location not found");
+      }
+      const partners = await PartnerModel.find({
+        isDeleted: false,
+        location: {
+          $near: {
+            $geometry: {
+              type: "Point",
+              coordinates: user.location.coordinates
+            },
+            $maxDistance: 20000 //for static maximum 20 kn range
+          }
+        }
+      });
+  
+      return Helper.success(res, "Nearby partners fetched successfully", partners);
+    } catch (err) {
+      console.error(err);
+      return Helper.error(res, "Failed to fetch partners");
+    }
+  };
+  // Admin manually assigns a partner to booking
+const assignPartnerManually = async (req, res) => {
+    try {
+      const { bookingId, partnerId } = req.body;
+  
+      const booking = await BookingModel.findById(bookingId);
+      if (!booking) return Helper.fail(res, "Booking not found");
+  
+      const partner = await PartnerModel.findById(partnerId);
+      if (!partner || partner.isDeleted) {
+        return Helper.fail(res, "Invalid or deleted partner");
+      }
+  
+      booking.partnerId = partnerId;
+      booking.status = "assigned";
+      await booking.save();
+  
+      return Helper.success(res, "Partner assigned successfully", booking);
+    } catch (err) {
+      console.error(err);
+      return Helper.error(res, "Failed to assign partner");
+    }
+  };
+  
+  
 module.exports = {
     initiateBooking,
     getDateAndTimeslot,
@@ -361,5 +455,8 @@ module.exports = {
     findBookingById,
     usersBookingListing,
     fetchTimeSlots,
-    getLocationAndAddress
+    getLocationAndAddress,
+    autoAssignPartner,
+    getNearbyPartners,
+    assignPartnerManually
 }
