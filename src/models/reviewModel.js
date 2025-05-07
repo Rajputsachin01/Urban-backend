@@ -18,7 +18,7 @@ const reviewSchema = new mongoose.Schema({
         // required: true,
         default: 5
     },
-    title: {
+    review: {
         type: String,
         required: true,
     },

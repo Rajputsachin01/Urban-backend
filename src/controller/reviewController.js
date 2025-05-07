@@ -4,7 +4,7 @@ const Helper = require("../utils/helper")
 const createReview = async (req, res) =>{
     try {
         const userId = req.userId
-        const { categoryId, partnerId, rating, title} = req.body
+        const { categoryId, partnerId, rating, review} = req.body
         if(!userId){
             return Helper.fail(res, "userId is required")
         }
@@ -17,20 +17,20 @@ const createReview = async (req, res) =>{
         if(!rating){
             return Helper.fail(res, "rating is required")
         }
-        if(!title){
-            return Helper.fail(res, "title is required")
+        if(!review){
+            return Helper.fail(res, "review is required")
         }
-        const review = await ReviewModel.create({
+        const addreview = await ReviewModel.create({
             userId, 
             partnerId,
             categoryId,
-            title,
+            review,
             rating
         })
-        if(!review){
+        if(!addreview){
             return Helper.fail(res, "review not created")
         }
-        return Helper.success(res, "review added", review)
+        return Helper.success(res, "review added", addreview)
     } catch (error) {
         return Helper.fail(res, "failed to create review")
     }
@@ -39,7 +39,7 @@ const createReview = async (req, res) =>{
 const updateReview = async (req, res) => {
     try {
         const userId = req.userId
-        const { reviewId, rating, title } = req.body
+        const { reviewId, rating, review } = req.body
         if(!userId){
             return Helper.fail(res, "userId is required")
         }
@@ -54,8 +54,8 @@ const updateReview = async (req, res) => {
         if(rating){
             query.rating = rating
         }
-        if(title){
-            query.title = title
+        if(review){
+            query.review = review
         }
         const update = await ReviewModel.findOneAndUpdate({_id: reviewId, isDeleted: false}, { $set: query }, {new: true})
         if(!update){
@@ -98,7 +98,7 @@ const listingReview = async (req, res) =>{
                 }
                 if (search) {
                     matchStage.$or = [
-                        { title: { $regex: search, $options: "i" } }
+                        { review: { $regex: search, $options: "i" } }
                     ];
                 }
                 const reviews = await ReviewModel.find(matchStage)
