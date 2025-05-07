@@ -1,85 +1,121 @@
 const NotificationModel = require("../models/notificationModel")
 const Helper = require("../utils/helper")
 
-const createNotification = async (req, res) =>{
+const createNotification = async (req, res) => {
     try {
-        const userId = req.userId
-        const type = req.type
-        const {icon, title, description} = req.body
-        if(!userId){
-            return Helper.fail(res, "userId is required")
+        // const userId = req.userId
+        // const type = req.type
+        const { icon, title, description, objectId, type, categoryId } = req.body
+        if (!objectId) {
+            return Helper.fail(res, "objectId is required")
         }
-        if(!type){
+        if (!categoryId) {
+            return Helper.fail(res, "categoryId is required")
+        }
+        if (!type) {
             return Helper.fail(res, "type required")
         }
-        if(!title){
+        if (!title) {
             return Helper.fail(res, "title is required")
         }
-        if(!description){
+        if (!icon) {
+            return Helper.fail(res, "icon is required")
+        }
+        if (!description) {
             return Helper.fail(res, "description is required")
         }
-        if(!userId){
-            return Helper.fail(res, "userId is required")
-        }
-        const notification = await NotificationModel.create({
+        const notificationData = {
+            icon,
             title,
             description,
-            userId
-        })
-        if(!notification){
-            return Helper.fail(res, "notification not created")
+            categoryId
+        };
+        if (type === "user") {
+            notificationData.userId = objectId;
+        } else if (type === "partner") {
+            notificationData.partnerId = objectId;
         }
-        return Helper.success(res, "notification created successfully", notification)
+        const notification = await NotificationModel.create(notificationData);
+        if (!notification) {
+            return Helper.fail(res, "Notification not created");
+        }
+
+        return Helper.success(res, "Notification created successfully", notification);
     } catch (error) {
         console.log(error)
         return Helper.fail(res, "failed to create notification")
     }
 }
 // lising notifications
-const listingNotrification = async (req, res) => {
+const listingNotification = async (req, res) => {
     try {
-        // const userId = req.userId
-        const { userId , limit = 3, page = 1, search} = req.body;
-            if(!userId){
-                return Helper.fail(res, "user Id is required")
-            }
-              const skip = (parseInt(page) - 1) * parseInt(limit);
-              let matchStage = { isDeleted: false, userId: userId };
-              if (search) {
-                matchStage.$or = [
-                  { title: { $regex: search, $options: "i" } },
-                  { description: { $regex: search, $options: "i" } },
-                ];
-              }
-              const notificationList = await NotificationModel.find(matchStage)
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(parseInt(limit));
-              const totalNotifications = await NotificationModel.countDocuments(matchStage);
-              if (notificationList.length === 0) {
-                return res.status(404).json({
-                  success: false,
-                  message: "No notifiation found matching the criteria",
-                });
-              }  
-              const data = {
-                notifications: notificationList,
-                pagination: {
-                    totalNotifications,
-                    totalPages: Math.ceil(totalNotifications / limit),
-                    currentPage: parseInt(page),
-                    limit: parseInt(limit),
-                  },
-              };
-          
-              return Helper.success(res, "notification listing fetched", data);
+        const userId = req.userId
+        const type = req.type
+        const { limit = 3, page = 1, search } = req.body;
+        if (!userId) {
+            return Helper.fail(res, "user Id is required")
+        }
+        if (!type) {
+            return Helper.fail(res, "type is required")
+        }
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        let matchStage = { isDeleted: false};
+        if (type === "user") {
+            matchStage.userId = userId;
+        } else if (type === "partner") {
+            matchStage.partnerId = userId;
+        }
+        if (search) {
+            matchStage.$or = [
+                { title: { $regex: search, $options: "i" } },
+                { description: { $regex: search, $options: "i" } },
+            ];
+        }
+        const notifications = await NotificationModel.find(matchStage)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+        const totalNotifications = await NotificationModel.countDocuments(matchStage);
+        if (notifications.length === 0) {
+            return Helper.fail(res, "No notification found matching the criteria");
+        }
+        const data = {
+            notifications,
+            pagination: {
+                totalNotifications,
+                totalPages: Math.ceil(totalNotifications / limit),
+                currentPage: parseInt(page),
+                limit: parseInt(limit),
+            },
+        };
+        return Helper.success(res, "Notification listing fetched", data);
     } catch (error) {
         console.log(error)
         return Helper.fail(res, "failed to fetched")
     }
 }
 
+// notification isRead
+const readNotification = async (req, res) =>{
+    try {
+        const { notificationId } = req.body
+        if(!notificationId){
+            return Helper.fail(res, "notification id is required")
+        }
+        const readNotification = await NotificationModel.findOneAndUpdate(
+            {_id:notificationId, isDeleted:false},
+            {$set:{isRead:true}}, 
+            {new: true});
+        if(!readNotification){
+            return Helper.fail(res, "notifiaction not available")
+        }
+        return Helper.success(res, "notification read", readNotification)
+    } catch (error) {
+        return Helper.fail(res, "failed to read")
+    }
+}
 module.exports = {
     createNotification,
-    listingNotrification
+    listingNotification,
+    readNotification
 }

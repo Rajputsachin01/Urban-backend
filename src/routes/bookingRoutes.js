@@ -7,7 +7,7 @@ const {
   removeBooking,
   updateBooking,
   fetchUserBooking,
-  userBookingHistoryOrPanding,
+  userBookingHistoryOrPending,
   cancelBooking,
   findBookingById,
   usersBookingListing,
@@ -27,7 +27,7 @@ router.post("/location", isAuth, getLocationAndAddress);
 router.post("/update/:id", isAuth, updateBooking);
 router.post("/delete", isAuth, removeBooking);
 router.post("/userbookings", isAuth, fetchUserBooking);
-router.post("/historyOrPanding", isAuth, userBookingHistoryOrPanding);
+router.post("/historyOrPanding", isAuth, userBookingHistoryOrPending);
 router.post("/cancel/:id", isAuth, cancelBooking);
 router.post("/findById/:id", isAuth, findBookingById);
 router.post("/usersBookingListing", isAuth, usersBookingListing);

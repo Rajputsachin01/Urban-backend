@@ -181,7 +181,7 @@ const fetchUserBooking = async (req, res) =>{
     }
 }
 // booking history and pending 
-const userBookingHistoryOrPanding = async (req, res) =>{
+const userBookingHistoryOrPending = async (req, res) =>{
         try {
             const userId = req.userId 
             const { type } = req.body
@@ -256,7 +256,6 @@ const findBookingById = async (req, res) =>{
 // fetch all users who have booking
 const usersBookingListing = async (req, res) => {
     try {
-        
         const { limit = 3, page = 1 } = req.body;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         let matchStage = { isDeleted: false };
@@ -351,7 +350,6 @@ const getDateAndTimeslot = async (req, res) =>{
 const autoAssignPartner = async (req, res) => {
     try {
       const { bookingId } = req.body;
-  
       const booking = await BookingModel.findById(bookingId).populate("userId");
       if (!booking) return Helper.fail(res, "Booking not found");
   
@@ -450,7 +448,7 @@ module.exports = {
     removeBooking,
     updateBooking,
     fetchUserBooking,
-    userBookingHistoryOrPanding,
+    userBookingHistoryOrPending,
     cancelBooking,
     findBookingById,
     usersBookingListing,
