@@ -24,10 +24,18 @@ const BookingSchema = new mongoose.Schema({
         default: ""
     },
     location: {
-        type: { lat: Number, lng: Number },
-        // required: true,
-        // default : ""
-    }, 
+        type: {
+          type: String,
+          enum: ['Point'],
+          required: true,
+          default: 'Point'
+        },
+        coordinates: {
+          type: [Number], // [longitude, latitude]
+          required: true,
+          default: [0, 0]
+        }
+      },      
     date: {
         type: Date,
         // required: true,
