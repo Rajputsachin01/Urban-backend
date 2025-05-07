@@ -15,13 +15,15 @@ const NotificationSchema = new mongoose.Schema({
     },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "users",
-        required : true
+        ref: "users"
     },
     partnerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "partner",
-        required : true
+        ref: "partner"
+    },
+    categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "categories"
     },
     isRead: {
         type: Boolean,

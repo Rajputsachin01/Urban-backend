@@ -19,6 +19,10 @@ const JobStatusSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    notes:{
+        type: String,
+        default: ""
+    },
     isDeleted: {
         type: Boolean,
         default: false
