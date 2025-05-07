@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const { isAuth } = require("../utils/auth");
 const { 
-    addBooking, 
+    initiateBooking,
+    // addBooking, 
     removeBooking, 
     updateBooking , 
     fetchUserBooking, 
@@ -10,11 +11,16 @@ const {
     cancelBooking,
     findBookingById,
     usersBookingListing,
-    fetchTimeSlots
+    fetchTimeSlots,
+    getDateAndTimeslot,
+    getLocationAndAddress
 } = require("../controller/bookingController")
 
 /*--------------------------------user Routes-------------------------------*/
-router.post("/addbooking",isAuth, addBooking)
+router.post("/initiateBooking",isAuth, initiateBooking)
+router.post("/getDateAndTimeslot",isAuth, getDateAndTimeslot)
+router.post("/location",isAuth, getLocationAndAddress)
+// router.post("/addbooking",isAuth, addBooking)
 router.post("/update/:id",isAuth, updateBooking)
 router.post("/delete",isAuth, removeBooking)
 router.post("/userbookings",isAuth, fetchUserBooking)

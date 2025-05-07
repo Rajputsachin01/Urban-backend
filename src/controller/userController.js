@@ -450,6 +450,20 @@ const getUserLocation = async (req, res) =>{
   }
 }
 
+// fetch referralCode
+const fetchReferralCode = async (req, res) =>{
+  const userId = req.userId
+  if(!userId){
+    return Helper.fail(res, "userId is required")
+  }
+  const referralCode = await UserModel.findOne({_id: userId, isDeleted: false})
+  .select("img name email phoneNo referralCode")
+  if(!referralCode){
+    return Helper.fail(res, "user not exist")
+  }
+  return Helper.success(res, "referral code fetched", referralCode)
+}
+
 module.exports = {
   registerUser,
   updateUser,
@@ -459,5 +473,6 @@ module.exports = {
   loginUser,
   verifyOTP,
   resendOTP,
-  getUserLocation
+  getUserLocation,
+  fetchReferralCode
 };

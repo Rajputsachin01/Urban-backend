@@ -13,33 +13,29 @@ const BookingSchema = new mongoose.Schema({
        type: mongoose.Schema.Types.ObjectId, ref: "categories",
         required: true
     },
-    // fullName:{
-    //     type: String,
-    //     required: true
-    // },
     partnerId: {
         type: mongoose.Schema.Types.ObjectId, ref: "partner",
-        required: true
+        // required: true,
+        // default: ""
     }, 
     address :{
         type: String,
-        required: true
+        // required: true,
+        default: ""
     },
-    // pincode :{
-    //     type: String,
-    //     required: true
-    // },
     location: {
         type: { lat: Number, lng: Number },
-        required: true,
+        // required: true,
+        // default : ""
     }, 
     date: {
         type: Date,
-        required: true
+        // required: true,
+        default: ""
     },      
     timeSlot: { 
         type: { start: String, end: String }, 
-        required: true,
+        // required: true,
     },
     bookingStatus: {
         type: String,
@@ -62,7 +58,7 @@ const BookingSchema = new mongoose.Schema({
     paymentMode: {
         type: String,
         enum: ['cash', 'upi', 'card', 'netbanking', 'wallet'],
-        required: true,
+        // required: true,
     }, 
     paymentStatus: {
         type: String,
