@@ -133,7 +133,7 @@ const removeCategory = async (req, res) =>{
         return Helper.fail(res, "failed to delete category")
     }
 }
-// listing and search by sellingType category 
+// listing and search by sellingType category (INCLUDE GLOBAL SEARCH) 
 const listingCategory = async (req, res) => {
     try {
       const { search, limit = 3, page = 1, sellingType } = req.body;
