@@ -47,7 +47,6 @@ const createPartner = async (req, res) => {
       createdBy,
       serviceId,
     } = req.body;
-    console.log(req.body);
 
     // Validation for required fields
     if (!name) {
@@ -148,7 +147,6 @@ const createPartner = async (req, res) => {
       return Helper.success(res, "OTP sent successfully!", create);
     }
   } catch (error) {
-    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -216,7 +214,6 @@ const resendOTP = async (req, res) => {
     );
     return Helper.success(res, "OTP resent successfully.");
   } catch (error) {
-    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -239,7 +236,6 @@ const deletePartner = async (req, res) => {
       deletedPartner: isDeleted,
     });
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -247,7 +243,6 @@ const deletePartner = async (req, res) => {
 const removePartner = async (req, res) => {
   try {
     const id = req.params.id;
-    console.log(id);
     if (!id) {
       return Helper.fail(res, "Partner id required");
     }
@@ -258,7 +253,6 @@ const removePartner = async (req, res) => {
       deletedPartner: isRemoved,
     });
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -286,7 +280,6 @@ const loginPartner = async (req, res) => {
 
     return Helper.success(res, "OTP sent successfully");
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, "failed to send OTP");
   }
 };
@@ -296,7 +289,6 @@ const getPartnerLocation = async (req, res) => {
     const partnerId = req.userId; //Coming from JWT token via isAuth middleware
     const { location } = req.body;
     const partner = await PartnerModel.findById(partnerId);
-    // console.log(partner)
     if (!partner) {
       return Helper.fail(res, "partner not found");
     }
@@ -310,13 +302,11 @@ const getPartnerLocation = async (req, res) => {
         new: true,
       }
     );
-    console.log({ updatedLocation });
     if (!updatedLocation) {
       return Helper.fail(res, "partner location not updated");
     }
     return Helper.success(res, "location updated successfully");
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, "failed to update location");
   }
 };
@@ -337,7 +327,6 @@ const fetchProfile = async (req, res) => {
 
     return Helper.success(res, "Profile fetched successfully", partnerProfile);
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, "Failed to fetch profile");
   }
 };
@@ -366,7 +355,6 @@ const partnerListing = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
-    // Build match stage
     const matchStage = {
       isDeleted: false,
     };
@@ -398,7 +386,6 @@ const partnerListing = async (req, res) => {
 
     return Helper.success(res, "Partner listing", data);
   } catch (error) {
-    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -415,195 +402,96 @@ const partnerListingWithServices = async (req, res) => {
     }
     return Helper.success(res, "partners listed with services", listing);
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, error.message);
   }
 };
 
-const myAnalytics = async (req, res) => {
-  // for calculating runnig and request orders
-  try {
-    const partnerId = req.userId;
-
-    if (!partnerId) {
-      return Helper.fail(res, "Partner ID is required");
-    }
-
-    const runningOrderCount = await BookingModel.countDocuments({
-      partnerId: partnerId,
-      bookingStatus: "Progress",
-    });
-    // Count Request Orders (bookingStatus: 'Pending')
-    const requestOrderCount = await BookingModel.countDocuments({
-      partnerId: partnerId,
-      bookingStatus: "Pending",
-    });
-
-    if (runningOrderCount === 0 && requestOrderCount === 0) {
-      return Helper.fail(res, "No running or request orders found");
-    }
-
-    return Helper.success(res, "Partner order analytics", {
-      runningOrders: runningOrderCount,
-      requestOrders: requestOrderCount,
-    });
-  } catch (error) {
-    return Helper.fail(res, error.message);
-  }
-};
-
-// const requestOrdersList = async (req, res) => {
-//     try {
-//       const partnerId = req.userId;
-
-//       if (!partnerId) {
-//         return Helper.fail(res, "Partner ID is required");
-//       }
-
-//       // If partnerId is stored as ObjectId in BookingModel, convert it:
-//       // const partnerObjectId = new mongoose.Types.ObjectId(partnerId);
-
-//       const requestOrders = await BookingModel.find({
-//         partnerId: partnerId, // or use `partner: partnerId` if that's the field name
-//         bookingStatus: 'Pending',
-//       });
-
-//       if (!requestOrders || requestOrders.length === 0) {
-//         return Helper.fail(res, "No request orders found");
-//       }
-
-//       return Helper.success(res, "Request orders list", requestOrders);
-
-//     } catch (error) {
-//       return Helper.fail(res, error.message);
-//     }
-//   };
-const requestOrdersList = async (req, res) => {
+const partnerAnalyticsAndOrders = async (req, res) => {
   try {
     const partnerId = req.userId;
     const { page = 1, limit = 3 } = req.body;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const limitVal = parseInt(limit);
 
     if (!partnerId) {
       return Helper.fail(res, "Partner ID is required");
     }
 
-    const matchStage = {
-      partnerId: partnerId,
-      bookingStatus: "Pending",
-    };
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitVal = parseInt(limit);
 
-    const requestOrders = await BookingModel.find(matchStage)
-      .sort({ createdAt: -1 }) // latest pending orders first
-      .skip(skip)
-      .limit(limitVal);
+    // Get analytics data
+    const [runningOrderCount, requestOrderCount] = await Promise.all([
+      BookingModel.countDocuments({ partnerId, bookingStatus: "Progress" }),
+      BookingModel.countDocuments({ partnerId, bookingStatus: "Pending" }),
+    ]);
 
-    const totalOrders = await BookingModel.countDocuments(matchStage);
+    // Fetch paginated request orders
+    const matchStage = { partnerId, bookingStatus: "Pending" };
 
-    if (requestOrders.length === 0) {
-      return Helper.fail(res, "No request orders found");
-    }
+    const [requestOrders, totalOrders] = await Promise.all([
+      BookingModel.find(matchStage)
+        .sort({ createdAt: -1 })      // latest pending orders first    
+        .skip(skip)
+        .limit(limitVal),
+      BookingModel.countDocuments(matchStage),
+    ]);
 
     const data = {
-      requestOrders,
-      totalOrders,
-      totalPages: Math.ceil(totalOrders / limitVal),
-      currentPage: parseInt(page),
-      limit: limitVal,
+      analytics: {
+        runningOrders: runningOrderCount,
+        requestOrders: requestOrderCount,
+      },
+      requestOrdersList: {
+        requestOrders,
+        totalOrders,
+        totalPages: Math.ceil(totalOrders / limitVal),
+        currentPage: parseInt(page),
+        limit: limitVal,
+      },
     };
 
-    return Helper.success(res, "Request orders list", data);
+    return Helper.success(res, "Partner analytics and request orders list", data);
   } catch (error) {
     return Helper.fail(res, error.message);
   }
 };
 
-// const fetchPartnerAnalytics = async (req, res) => {
-//   try {
-//     const partnerId = req.userId;
-//     if (!partnerId) {
-//       return Helper.fail(res, "Partner ID is required");
-//     }
-
-//     // 1) Cast to ObjectId so Mongo can match correctly
-//     const partnerObjectId = new ObjectId(partnerId);
-
-//     // 2) Aggregate safely with a default of 0
-//     const [ { totalAmount: Earnings = 0,
-//               completedJobs: CompletedJobs = 0,
-//      } = {} ] =
-//       await BookingModel.aggregate([
-//         {
-//           $match: {
-//             partnerId:     partnerObjectId,
-//             bookingStatus: 'Completed',
-//           }
-//         },
-//         {
-//           $group: {
-//             _id:         null,
-//             totalAmount: { $sum: '$totalPrice' },
-//             completedJobs: { $sum: 1 }
-//           }
-//         }
-//       ]);
-
-// const [ { totalAmount: PendingEarnings = 0 } = {} ] =
-//       await BookingModel.aggregate([
-//         { $match: { partnerId: partnerObjectId, bookingStatus: 'Pending' } },
-//         { $group: {
-//             _id: null,
-//             totalAmount: { $sum: '$totalPrice' }
-//         } }
-//       ]);
-//     // 3) Respond with the total
-//     return Helper.success(res, "Partner Earning Analytics", {
-//       TotalEarnings: Earnings,
-//       completedJobs:  CompletedJobs,
-//       PendingEarnings:  PendingEarnings
-//     });
-
-//   } catch (error) {
-//     return Helper.fail(res, error.message);
-//   }
-// };
-
-// const mongoose = require("mongoose");
-// const { ObjectId } = mongoose.Types;
-const fetchPartnerAnalytics = async (req, res) => {
+const partnerAnalyticsEarningsWithJobs = async (req, res) => {
   try {
     const partnerId = req.userId;
-    const duration = req.body.duration; // 'week' or 'month'
+    let { duration = "week", page = 1, limit = 3 } = req.body;
 
     if (!partnerId) {
       return Helper.fail(res, "Partner ID is required");
     }
 
+    duration = duration.toLowerCase();
     if (!["week", "month"].includes(duration)) {
-      return Helper.fail(res, "Duration must be 'week' or 'month'");
+      return Helper.fail(res, "Invalid duration. Must be 'week' or 'month'");
     }
 
     const partnerObjectId = new ObjectId(partnerId);
     const now = new Date();
-
-    // Calculate date range based on duration
     const startDate = new Date(now);
+
+    // Calculate start date based on duration
     if (duration === "week") {
-      startDate.setDate(now.getDate() - 7); // Last 7 days
+      startDate.setDate(now.getDate() - 7);
     } else if (duration === "month") {
-      startDate.setDate(now.getDate() - 30); // Last 30 days
+      startDate.setDate(now.getDate() - 30);
     }
 
-    // ===== Filtered Completed Earnings in Time Range =====
-    const [
-      { totalAmount: TotalEarnings = 0, completedJobs: CompletedJobs = 0 } = {},
-    ] = await BookingModel.aggregate([
+    // Match conditions to apply for all queries
+    const baseMatch = {
+      partnerId: partnerObjectId,
+      createdAt: { $gte: startDate, $lte: now },
+    };
+
+    // ===== Earnings Analytics =====
+    const [completedData = {}] = await BookingModel.aggregate([
       {
         $match: {
-          partnerId: partnerObjectId,
+          ...baseMatch,
           bookingStatus: "Completed",
-          createdAt: { $gte: startDate, $lte: now },
         },
       },
       {
@@ -615,101 +503,64 @@ const fetchPartnerAnalytics = async (req, res) => {
       },
     ]);
 
-    // ===== Pending Earnings within duration =====
-    const [{ totalAmount: PendingEarnings = 0 } = {}] =
-      await BookingModel.aggregate([
-        {
-          $match: {
-            partnerId: partnerObjectId,
-            bookingStatus: "Pending",
-            createdAt: { $gte: startDate, $lte: now },
-          },
+    const [pendingData = {}] = await BookingModel.aggregate([
+      {
+        $match: {
+          ...baseMatch,
+          bookingStatus: "Pending",
         },
-        {
-          $group: {
-            _id: null,
-            totalAmount: { $sum: "$totalPrice" },
-          },
+      },
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: "$totalPrice" },
         },
-      ]);
+      },
+    ]);
 
-    return Helper.success(res, `Partner Earning Analytics for ${duration}`, {
-      Duration: duration,
-      TotalEarnings,
-      CompletedJobs,
-      PendingEarnings,
-    });
-  } catch (error) {
-    return Helper.fail(res, error.message);
-  }
-};
-
-// const listRecentJobs = async (req, res) => {
-//   try {
-//     const partnerId = req.userId;
-
-//     if (!partnerId) {
-//       return Helper.fail(res, "Partner ID is required");
-//     }
-
-//     const partnerObjectId = new ObjectId(partnerId);
-
-//     const RecentJobs = await BookingModel.find({
-//       partnerId: partnerObjectId,
-//       bookingStatus: 'Completed'
-//     })
-//     .sort({ createdAt: -1 }); // newest first
-
-//     return Helper.success(res, "Recent Jobs fetched successfully", {
-//       RecentJobs
-//     });
-
-//   } catch (error) {
-//     return Helper.fail(res, error.message);
-//   }
-// };
-const listRecentJobs = async (req, res) => {
-  try {
-    const partnerId = req.userId;
-    const { page = 1, limit = 3 } = req.body;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const limitVal = parseInt(limit);
-
-    if (!partnerId) {
-      return Helper.fail(res, "Partner ID is required");
-    }
-
-    const partnerObjectId = new ObjectId(partnerId);
+    // ===== Recent Completed Jobs List =====
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const skip = (page - 1) * limit;
 
     const matchStage = {
-      partnerId: partnerObjectId,
+      ...baseMatch,
       bookingStatus: "Completed",
     };
 
-    const RecentJobs = await BookingModel.find(matchStage)
-      .sort({ createdAt: -1 }) // newest first
-      .skip(skip)
-      .limit(limitVal);
-
-    const totalJobs = await BookingModel.countDocuments(matchStage);
-
-    if (RecentJobs.length === 0) {
-      return Helper.fail(res, "No recent jobs found");
-    }
+    const [RecentJobs, totalJobs] = await Promise.all([
+      BookingModel.find(matchStage)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      BookingModel.countDocuments(matchStage),
+    ]);
 
     const data = {
-      RecentJobs,
-      totalJobs,
-      totalPages: Math.ceil(totalJobs / limitVal),
-      currentPage: parseInt(page),
-      limit: limitVal,
+      analytics: {
+        duration,
+        TotalEarnings: completedData.totalAmount || 0,
+        CompletedJobs: completedData.completedJobs || 0,
+        PendingEarnings: pendingData.totalAmount || 0,
+      },
+      recentJobsList: {
+        RecentJobs,
+        totalJobs,
+        totalPages: Math.ceil(totalJobs / limit),
+        currentPage: page,
+        limit,
+      },
     };
 
-    return Helper.success(res, "Recent Jobs fetched successfully", data);
+    return Helper.success(res, `Partner earnings and jobs for ${duration}`, data);
   } catch (error) {
     return Helper.fail(res, error.message);
   }
 };
+
+
+
+
 
 module.exports = {
   createPartner,
@@ -722,8 +573,6 @@ module.exports = {
   fetchProfile,
   partnerListing,
   partnerListingWithServices,
-  myAnalytics,
-  requestOrdersList,
-  fetchPartnerAnalytics,
-  listRecentJobs,
+  partnerAnalyticsAndOrders,
+  partnerAnalyticsEarningsWithJobs
 };

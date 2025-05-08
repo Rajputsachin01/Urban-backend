@@ -5,9 +5,7 @@ mongoose.set("strictPopulate", false);
 
 const createService = async (req, res) => {
   try {
-    const { name, price, time, images, description, type, categories } =
-      req.body;
-    console.log(req.body);
+    const { name, price, time, images, description, type, categories } = req.body;
 
     if (!name) {
       return Helper.fail(res, "Name is required!");
@@ -45,7 +43,6 @@ const createService = async (req, res) => {
     }
     return Helper.success(res, "service created successfully!", create);
   } catch (error) {
-    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
