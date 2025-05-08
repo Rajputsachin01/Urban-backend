@@ -17,40 +17,6 @@ const generateTimeSlots = (startTime, endTime, duration) => {
   
     return slots;
 };
-// add booking
-// const addBooking = async (req, res) =>{
-//     try {
-//         const userId = req.userId
-//         const { serviceId, categoryId, partnerId,  address, location, date, timeSlot,  paymentMode } = req.body
-//         if(!serviceId || !categoryId ||  !address || !partnerId|| !location || !date || !timeSlot || !paymentMode){
-//             return Helper.fail(res, "All fields are required")
-//         }
-//         console.log(req.body)
-//         const booking = await BookingModel.create({
-//             userId,
-//             serviceId,
-//             categoryId,
-//             partnerId,
-//             address,
-//             location,
-//             date,
-//             timeSlot,
-//             paymentMode,
-//             bookingStatus: "Pending",
-//             price: 0,
-//             discountAmount: 0,
-//             totalPrice: 0,
-//             paymentStatus: "Pending"
-//         })
-//         if(!booking){
-//             return Helper.fail(res, "booking failed")
-//         }
-//         return Helper.success(res, "booking successfull", booking)
-//     } catch (error) {
-//         console.log(error)
-//         return Helper.fail(res, error.message)
-//     }
-// }
 // initiate Booking
 const initiateBooking = async (req, res) =>{
     try {
@@ -70,7 +36,8 @@ const initiateBooking = async (req, res) =>{
         const booking = await BookingModel.create({
             userId,
             serviceId,
-            categoryId
+            categoryId,
+            unitQuantity
         }) 
         if(!booking){
             return Helper.fail(res, "booking not initiate")
@@ -242,7 +209,7 @@ const findBookingById = async (req, res) =>{
             return Helper.fail(res, "booking id is required")
         } 
         const booking = await BookingModel.findOne({_id: bookingId, isDeleted:false})
-        .select("-userId -serviceId -categoryId -bookingStatus -isDeleted -createdAt -updatedAt -__v")
+        .select("-userId -serviceId -categoryId  -isDeleted -createdAt -updatedAt -__v")
         .populate("serviceId", "name -_id")
         .populate("categoryId", "name -_id")
         if(!booking || booking.length === 0){
@@ -306,8 +273,8 @@ const fetchTimeSlots = async (req, res) => {
       }
   
       const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
-      const businessStart = "09:00";
-      const businessEnd = "18:00";
+      const businessStart = process.env.BUSINESS_START_TIME;
+      const businessEnd = process.env.BUSINESS_END_TIME;
   
       const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
   
@@ -385,8 +352,7 @@ const autoAssignPartner = async (req, res) => {
       console.error(err);
       return Helper.error(res, "Something went wrong");
     }
-  };
-  
+};
  // Get sorted list of nearby partners for manual assignment (admin - based on bookingId)
 const getNearbyPartners = async (req, res) => {
     try {
@@ -415,7 +381,7 @@ const getNearbyPartners = async (req, res) => {
       console.error(err);
       return Helper.error(res, "Failed to fetch partners");
     }
-  };
+};
   // Admin manually assigns a partner to booking
 const assignPartnerManually = async (req, res) => {
     try {
@@ -438,13 +404,11 @@ const assignPartnerManually = async (req, res) => {
       console.error(err);
       return Helper.error(res, "Failed to assign partner");
     }
-  };
-  
-  
+};
+    
 module.exports = {
     initiateBooking,
     getDateAndTimeslot,
-    // addBooking,
     removeBooking,
     updateBooking,
     fetchUserBooking,

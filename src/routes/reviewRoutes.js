@@ -2,7 +2,7 @@ const express = require("express")
 const router = express.Router()
 const {isAuth} = require("../utils/auth")
 
-const { createReview, updateReview, deleteReview, listingReview } = require("../controller/reviewController")
+const { createReview, updateReview, deleteReview, listingReview} = require("../controller/reviewController")
 
 /*--------------------------------Routes-------------------------------*/
 router.post("/createReview", isAuth, createReview)

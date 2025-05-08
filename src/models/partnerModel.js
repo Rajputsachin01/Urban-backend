@@ -61,6 +61,10 @@ const PartnerSchema = new mongoose.Schema({
         required: true,
         default:""
     },
+    avgRating:{
+        type: Number,
+        default: ""
+    },
     isPublish: {
         type: Boolean,
         default: false
