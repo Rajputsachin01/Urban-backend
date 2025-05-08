@@ -36,7 +36,8 @@ const initiateBooking = async (req, res) =>{
         const booking = await BookingModel.create({
             userId,
             serviceId,
-            categoryId
+            categoryId,
+            unitQuantity
         }) 
         if(!booking){
             return Helper.fail(res, "booking not initiate")
@@ -272,8 +273,8 @@ const fetchTimeSlots = async (req, res) => {
       }
   
       const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
-      const businessStart = "09:00";
-      const businessEnd = "18:00";
+      const businessStart = process.env.BUSINESS_START_TIME;
+      const businessEnd = process.env.BUSINESS_END_TIME;
   
       const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
   

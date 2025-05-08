@@ -18,6 +18,9 @@ const BookingSchema = new mongoose.Schema({
         // required: true,
         // default: ""
     }, 
+    unitQuantity: {
+        type: Number,
+    },
     address :{
         type: String,
         // required: true,

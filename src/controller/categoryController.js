@@ -195,6 +195,8 @@ const categoriesForService = async (req, res) =>{
     }
 }  
 
+
+
 module.exports = {
     createCategory,
     updateCategory,

@@ -36,9 +36,10 @@ const generateOTP = () =>
 //For creating admin
 const registerAdmin = async (req, res) => {
   try {
-    const { firstName, lastName, phoneNo, email, password } = req.body;
-    console.log(req.body);
+    const {profileImage, firstName, lastName, phoneNo, email, password } = req.body;
+    console.log({profileImage, firstName, lastName, phoneNo, email, password })
     // validation for required field
+    if (!profileImage) return Helper.fail(res, "profileImage is required");
     if (!firstName) return Helper.fail(res, "First name is required");
     if (!lastName) return Helper.fail(res, "Last name is required");
     if (!phoneNo) return Helper.fail(res, "Phone number is required");
@@ -69,7 +70,7 @@ const registerAdmin = async (req, res) => {
     // const otp = generateOTP();
     const otp = "1234"
     const userObj = {
-      // profileImage,
+      profileImage,
       firstName,
       lastName,
       email,
@@ -167,7 +168,7 @@ const loginAdmin = async (req, res) => {
 const updateAdmin = async (req, res) => {
   try {
     let adminId = req.userId;
-    const { firstName, lastName, email, phoneNo } =
+    const { profileImage, firstName, lastName, email, phoneNo } =
       req.body;
     if (!adminId) {
       return Helper.fail(res, "adminId is missing from request");
@@ -192,6 +193,9 @@ const updateAdmin = async (req, res) => {
       return Helper.fail(res, "admin not found!");
     }
     let objToUpdate = {};
+    if (profileImage) {
+      objToUpdate.profileImage = profileImage;
+    }
     if (firstName) {
       objToUpdate.firstName = firstName;
     }
