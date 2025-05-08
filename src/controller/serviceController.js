@@ -144,13 +144,13 @@ const updateService = async (req, res) => {
       updatedService.time = time;
     }
     if (images) {
-      updatedService.time = time;
+      updatedService.images = images;
     }
     if (description) {
       updatedService.description = description;
     }
     if (type) {
-      updatedService.description = description;
+      updatedService.type = type;
     }
     if (categories) {
       updatedService.categories = categories;

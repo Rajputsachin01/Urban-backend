@@ -5,7 +5,6 @@ const createOffer = async (req, res) => {
   try {
     const adminId = req.userId;
     const { serviceId, categoryId, image, title, startDate, endDate} = req.body;
-    console.log(req.body);
     if (!serviceId) {
       return Helper.fail(res, "ServiceId is required!");
     }
@@ -16,7 +15,6 @@ const createOffer = async (req, res) => {
     }
     return Helper.success(res, "Offer created successfully!", create);
   } catch (error) {
-    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -32,7 +30,6 @@ const removeOffer = async (req, res) => {
     });
     return Helper.success(res, "Offer remove Successfully", isRemoved);
   } catch (error) {
-    console.log(error);
     return Helper.fail(res, error.message);
   }
 };
@@ -67,7 +64,6 @@ const listingOffer = async (req,res) =>{
         return Helper.success(res, "Offers listing", data);
 
   } catch(error){
-    console.error(error);
         return Helper.fail(res, error.message);
 
   }
