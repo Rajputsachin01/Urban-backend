@@ -3,20 +3,30 @@ const PartnerModel = require("../models/partnerModel")
 const Helper = require("../utils/helper")
 const moment = require("moment");
 // helper function  for time slot
+
 const generateTimeSlots = (startTime, endTime, duration) => {
-    const slots = [];
-    let start = moment(startTime, "HH:mm");
-    const end = moment(endTime, "HH:mm");
-  
-    while (start.clone().add(duration, "minutes").isSameOrBefore(end)) {
-      const slotStart = start.format("hh:mm A");
-      const slotEnd = start.clone().add(duration, "minutes").format("hh:mm A");
-      slots.push(`${slotStart} - ${slotEnd}`);
-      start.add(duration, "minutes");
-    }
-  
-    return slots;
+  if (!moment(startTime, "HH:mm", true).isValid() || !moment(endTime, "HH:mm", true).isValid()) {
+    throw new Error("Invalid time format. Use HH:mm format.");
+  }
+  if (duration <= 0) {
+    throw new Error("Duration must be greater than 0.");
+  }
+
+  const slots = [];
+  let start = moment(startTime, "HH:mm");
+  const end = moment(endTime, "HH:mm");
+
+  while (start.clone().add(duration, "minutes").isSameOrBefore(end)) {
+    const slotStart = start.format("hh:mm A");
+    const slotEnd = start.clone().add(duration, "minutes").format("hh:mm A");
+    slots.push(`${slotStart} - ${slotEnd}`);
+    start.add(duration, "minutes");
+  }
+
+  return slots;
 };
+
+
 // initiate Booking
 const initiateBooking = async (req, res) =>{
     try {
@@ -104,9 +114,8 @@ const fetchTimeSlots = async (req, res) => {
       const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
       const businessStart = process.env.BUSINESS_START_TIME;
       const businessEnd = process.env.BUSINESS_END_TIME;
-  
+      
       const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
-  
       return Helper.success(res, "Time slots generated", timeSlots);
     } catch (error) {
       console.error(error);
