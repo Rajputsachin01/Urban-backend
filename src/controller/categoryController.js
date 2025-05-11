@@ -4,8 +4,7 @@ const Helper = require("../utils/helper")
 // create category
 const createCategory = async (req, res) =>{
     try {
-        const {icon, name, description, sellingType, size, price, seat, serviceId } = req.body
-        console.log(name, description, sellingType, size, price, seat,serviceId )
+        const {icon, name, description, sellingType, size, price, seat,piece, serviceId } = req.body
         if(!icon) return Helper.fail(res, "Category icon is required")
         if(!name) return Helper.fail(res, "Category name is required")
         if(!description) return Helper.fail(res, "Category description is required")
@@ -24,7 +23,8 @@ const createCategory = async (req, res) =>{
             serviceId,
             size,
             price,
-            seat
+            seat,
+            piece
         })
         if(!createCategory){
             return Helper.fail(res, "category not create")
@@ -40,7 +40,7 @@ const createCategory = async (req, res) =>{
 const updateCategory = async (req, res) =>{
     try {
         const categoryId = req.params.id
-        const { icon, name, description, sellingType, size, price, seat } = req.body
+        const { icon, name, description, sellingType, size, price, seat,piece } = req.body
         if(!categoryId){
             return Helper.fail(res, "category id is required")
         }
@@ -76,6 +76,9 @@ const updateCategory = async (req, res) =>{
         }
         if(seat){
             updateObj.seat = seat
+        }
+        if(piece){
+            updateObj.piece = piece
         }
         const categoryUpdate = await CategoryModel.findByIdAndUpdate(
             categoryId,
@@ -184,7 +187,7 @@ const categoriesForService = async (req, res) =>{
         }
         const categories = await CategoryModel.find({serviceId})
         .select("-isDeleted -createdAt -updatedAt -__v")
-        .populate("serviceId", "name ")
+        .populate("serviceId", "name","time")
         if(!categories){
             return Helper.fail(res, "no category available for this service")
         }

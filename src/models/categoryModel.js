@@ -35,6 +35,10 @@ const CategorySchema = new mongoose.Schema({
         type: Number,
         default: ""
     },
+    piece: {
+        type: Number,
+        default: ""
+    },
     isDeleted:{
         type: Boolean,
         default: false

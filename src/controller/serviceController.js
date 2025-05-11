@@ -62,64 +62,7 @@ const removeService = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-//  const listingService = async (req, res) => {
 
-//   try {
-//     const { search, limit = 3, page = 1 } = req.body;
-
-//     const skip = (parseInt(page) - 1) * parseInt(limit);
-//     const limitVal = parseInt(limit);
-//     // Building the query with search and isDeleted filter
-//     let matchStage = { isDeleted: false };
-//     if (search) {
-//       const isNumber = !isNaN(search);
-//       matchStage.$or = [
-//         { name: { $regex: search, $options: "i" } },
-//         { type: { $regex: search, $options: "i" } },
-//         ...(isNumber ? [{ price: Number(search) }] : [])
-//       ];
-//     }
-
-//     // Fetch paginated services matching the search criteria
-//     // Aggregation pipeline
-//     const serviceList = await ServiceModel.aggregate([
-//       { $match: matchStage },
-//       {
-//         $lookup: {
-//           from: "categories",   // name of the categories collection
-//           localField: "categories",   // field in ServiceModel
-//           foreignField: "_id",       // _id in categories collection
-//           as: "categoryDetails"
-//         }
-//       },
-//       { $unwind: "$categoryDetails"},
-//       { $skip: skip},
-//       { $limit: limitVal}
-//     ]);
-//     // const serviceList = await ServiceModel.find(matchStage)
-//     //   .populate('categories')
-//     //   .skip(skip)
-//     //   .limit(parseInt(limit));
-//     // Fetch total count for pagination info
-//     const totalServices = await ServiceModel.countDocuments(matchStage);
-//     if (serviceList.length === 0) {
-//       return Helper.fail(res, {message: "No service found matching the criteria"});
-//     }
-
-//     const data = {
-//       services: serviceList,
-//       totalServices,
-//       totalPages: Math.ceil(totalServices / limitVal),
-//       currentPage: parseInt(page),
-//       limit: limitVal
-//     }
-//     return Helper.success(res, "services listing fetched", data)
-//   }
-//   catch (error) {
-//     console.log(error);
-//     return Helper.fail(res, error.message);
-//   }
-// };
 
 const updateService = async (req, res) => {
   try {
@@ -198,14 +141,7 @@ const listingService = async (req, res) => {
 
     const serviceList = await ServiceModel.find(matchStage)
       .skip(skip)
-      .limit(limitVal);
-
-    // Aggregation pipeline without category lookup
-    // const serviceList = await ServiceModel.aggregate([
-    //   { $match: matchStage },
-    //   { $skip: skip },
-    //   { $limit: limitVal }
-    // ]);
+      .limit(limitVal);;
 
     const totalServices = await ServiceModel.countDocuments(matchStage);
 

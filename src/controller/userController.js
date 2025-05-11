@@ -128,7 +128,7 @@ const registerUser = async (req, res) => {
     };
 
     const createUser = await UserModel.create(userObj);
-    return Helper.success(res, "User registered successfully", createUser);
+    return Helper.success(res, "OTP successfully", createUser);
   } catch (error) {
     console.log(error);
     res.status(500).json({ error: "Internal server error" });
