@@ -83,5 +83,6 @@ const BookingSchema = new mongoose.Schema({
 
 },
 { timestamps: true})
+BookingSchema.index({ location: "2dsphere" });
 
 module.exports = mongoose.model("bookings", BookingSchema)

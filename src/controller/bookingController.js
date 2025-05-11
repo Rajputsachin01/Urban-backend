@@ -84,6 +84,83 @@ const getLocationAndAddress = async (req, res) =>{
     }
 
 }
+  // fetch the time slot between 9:00 AM to 6:00 PM
+const fetchTimeSlots = async (req, res) => {
+    try {
+      const { bookingId } = req.body;
+  
+      if (!bookingId) {
+        return Helper.fail(res, "Booking ID is required");
+      }
+  
+      // Fetch booking and populate the service to get the time
+      const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
+        .populate("serviceId", "time");
+  
+      if (!booking || !booking.serviceId || !booking.serviceId.time) {
+        return Helper.fail(res, "Service time not found in booking");
+      }
+  
+      const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
+      const businessStart = process.env.BUSINESS_START_TIME;
+      const businessEnd = process.env.BUSINESS_END_TIME;
+  
+      const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
+  
+      return Helper.success(res, "Time slots generated", timeSlots);
+    } catch (error) {
+      console.error(error);
+      return Helper.fail(res, "Failed to generate time slots");
+    }
+};
+// get date and time slot and saved in booking
+const getDateAndTimeslot = async (req, res) =>{
+    try {
+        const {date, timeSlot, bookingId } = req.body
+        if(!bookingId){
+            return Helper.fail(res, "bookingId is required")
+        }
+        if(!date){
+            return Helper.fail(res, "date is required")
+        }
+        if(!timeSlot){
+            return Helper.fail(res, "timeSlot is required")
+        }
+        const dateAndTime = await BookingModel.findOneAndUpdate(
+            { _id: bookingId, isDeleted: false },
+            { $set: { date, timeSlot } },
+            { new: true }
+        );
+        if (!dateAndTime) {
+            return Helper.fail(res, "Booking not found or already deleted");
+        }
+        return Helper.success(res, "Booking date and time updated", dateAndTime);
+        
+    } catch (error) {
+        return Helper.fail(res, "failed to add date and time slot");
+    }
+
+
+}
+// find booking by id
+const findBookingById = async (req, res) =>{
+    try {
+        const bookingId = req.params.id
+        if(!bookingId){
+            return Helper.fail(res, "booking id is required")
+        } 
+        const booking = await BookingModel.findOne({_id: bookingId, isDeleted:false})
+        .select("-userId -serviceId -categoryId  -isDeleted -createdAt -updatedAt -__v")
+        .populate("serviceId", "name -_id")
+        .populate("categoryId", "name -_id")
+        if(!booking || booking.length === 0){
+            return Helper.fail(res, "booking not found")
+        }
+        return Helper.success(res, "booking found successfully", booking)
+    } catch (error) {
+        return Helper.fail(res, error.message)
+    }
+}
 // update booking
 const updateBooking = async (req, res) =>{
     try {
@@ -201,25 +278,7 @@ const cancelBooking = async (req, res) =>{
     }
 
 }
-// find booking by id
-const findBookingById = async (req, res) =>{
-    try {
-        const bookingId = req.params.id
-        if(!bookingId){
-            return Helper.fail(res, "booking id is required")
-        } 
-        const booking = await BookingModel.findOne({_id: bookingId, isDeleted:false})
-        .select("-userId -serviceId -categoryId  -isDeleted -createdAt -updatedAt -__v")
-        .populate("serviceId", "name -_id")
-        .populate("categoryId", "name -_id")
-        if(!booking || booking.length === 0){
-            return Helper.fail(res, "booking not found")
-        }
-        return Helper.success(res, "booking found successfully", booking)
-    } catch (error) {
-        return Helper.fail(res, error.message)
-    }
-}
+
 // fetch all users who have booking
 const usersBookingListing = async (req, res) => {
     try {
@@ -255,64 +314,7 @@ const usersBookingListing = async (req, res) => {
             return Helper.fail(res, "failed to fetch users booking listing")
         }
 }
-  // set the time slot between 9:00 AM to 6:00 PM
-const fetchTimeSlots = async (req, res) => {
-    try {
-      const { bookingId } = req.body;
-  
-      if (!bookingId) {
-        return Helper.fail(res, "Booking ID is required");
-      }
-  
-      // Fetch booking and populate the service to get the time
-      const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
-        .populate("serviceId", "time");
-  
-      if (!booking || !booking.serviceId || !booking.serviceId.time) {
-        return Helper.fail(res, "Service time not found in booking");
-      }
-  
-      const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
-      const businessStart = process.env.BUSINESS_START_TIME;
-      const businessEnd = process.env.BUSINESS_END_TIME;
-  
-      const timeSlots = generateTimeSlots(businessStart, businessEnd, serviceTime);
-  
-      return Helper.success(res, "Time slots generated", timeSlots);
-    } catch (error) {
-      console.error(error);
-      return Helper.fail(res, "Failed to generate time slots");
-    }
-};
-// get date and time slot
-const getDateAndTimeslot = async (req, res) =>{
-    try {
-        const {date, timeSlot, bookingId } = req.body
-        if(!bookingId){
-            return Helper.fail(res, "bookingId is required")
-        }
-        if(!date){
-            return Helper.fail(res, "date is required")
-        }
-        if(!timeSlot){
-            return Helper.fail(res, "timeSlot is required")
-        }
-        const dateAndTime = await BookingModel.findOneAndUpdate(
-            { _id: bookingId, isDeleted: false },
-            { $set: { date, timeSlot } },
-            { new: true }
-        );
-        if (!dateAndTime) {
-            return Helper.fail(res, "Booking not found or already deleted");
-        }
-        return Helper.success(res, "Booking date and time updated", dateAndTime);
-        
-    } catch (error) {
-        return Helper.fail(res, "failed to add date and time slot");
-    }
 
-
-}
 // Auto-assign partner based on user's location
 const autoAssignPartner = async (req, res) => {
     try {
@@ -324,6 +326,7 @@ const autoAssignPartner = async (req, res) => {
       if (!user || !user.location || !user.location.coordinates) {
         return Helper.fail(res, "User location not found");
       }
+      console.log(booking,"model")
   
       const nearestPartner = await PartnerModel.findOne({
         isDeleted: false,
@@ -332,7 +335,8 @@ const autoAssignPartner = async (req, res) => {
           $near: {
             $geometry: {
               type: "Point",
-              coordinates: user.location.coordinates,
+            //   coordinates: user.location.coordinates,
+              coordinates: booking.location.coordinates,
             },
             $maxDistance: 10000 // in meters (10 km)
           }
@@ -369,7 +373,8 @@ const getNearbyPartners = async (req, res) => {
           $near: {
             $geometry: {
               type: "Point",
-              coordinates: user.location.coordinates
+            //   coordinates: user.location.coordinates
+              coordinates: booking.location.coordinates
             },
             $maxDistance: 20000 //for static maximum 20 kn range
           }
@@ -408,17 +413,18 @@ const assignPartnerManually = async (req, res) => {
     
 module.exports = {
     initiateBooking,
+    getLocationAndAddress,
+    fetchTimeSlots,
     getDateAndTimeslot,
+    findBookingById,
+    autoAssignPartner,
+    getNearbyPartners,
+    assignPartnerManually,
     removeBooking,
     updateBooking,
     fetchUserBooking,
     userBookingHistoryOrPending,
     cancelBooking,
-    findBookingById,
     usersBookingListing,
-    fetchTimeSlots,
-    getLocationAndAddress,
-    autoAssignPartner,
-    getNearbyPartners,
-    assignPartnerManually
+    
 }
