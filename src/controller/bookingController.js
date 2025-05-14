@@ -2,8 +2,8 @@ const BookingModel = require("../models/bookingModel");
 const PartnerModel = require("../models/partnerModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
+const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
 // helper function  for time slot
-
 const generateTimeSlots = (startTime, endTime, duration) => {
   if (
     !moment(startTime, "HH:mm", true).isValid() ||
@@ -134,33 +134,46 @@ const fetchTimeSlots = async (req, res) => {
     return Helper.fail(res, "Failed to generate time slots");
   }
 };
-// get date and time slot and saved in booking
+// select date and time slot and saved in booking
 const getDateAndTimeslot = async (req, res) => {
   try {
     const { date, timeSlot, bookingId } = req.body;
-    if (!bookingId) {
-      return Helper.fail(res, "bookingId is required");
-    }
-    if (!date) {
-      return Helper.fail(res, "date is required");
-    }
-    if (!timeSlot) {
-      return Helper.fail(res, "timeSlot is required");
-    }
+    if (!bookingId) return Helper.fail(res, "bookingId is required");
+    if (!date) return Helper.fail(res, "date is required");
+    if (!timeSlot) return Helper.fail(res, "timeSlot is required");
+
     const dateAndTime = await BookingModel.findOneAndUpdate(
       { _id: bookingId, isDeleted: false },
       { $set: { date, timeSlot } },
       { new: true }
     );
+
     if (!dateAndTime) {
       return Helper.fail(res, "Booking not found or already deleted");
     }
-    // await assignPartnerToBooking(bookingId);
-    return Helper.success(res, "Booking date and time updated", dateAndTime);
+
+    // ✅ Auto-assign partner after slot selection
+    const assignResult = await autoAssignFromBookingId(bookingId);
+
+    if (!assignResult.success) {
+      return Helper.fail(
+        res,
+        "Date/time updated but partner not assigned: " + assignResult.message,
+        dateAndTime
+      );
+    }
+
+    return Helper.success(
+      res,
+      "Booking date and time updated, partner auto-assigned",
+      assignResult.data
+    );
   } catch (error) {
-    return Helper.fail(res, "failed to add date and time slot");
+    console.error(error);
+    return Helper.fail(res, "Failed to add date and time slot");
   }
 };
+
 // find booking by id
 const findBookingById = async (req, res) => {
   try {
@@ -352,41 +365,57 @@ const usersBookingListing = async (req, res) => {
   }
 };
 // Auto-assign partner based on user's location
+// const autoAssignPartner = async (req, res) => {
+//   try {
+//     const { bookingId } = req.body;
+//     const booking = await BookingModel.findById(bookingId).populate("userId");
+//     if (!booking) return Helper.fail(res, "Booking not found");
+
+//     const user = booking.userId;
+//     if (!user || !user.location || !user.location.coordinates) {
+//       return Helper.fail(res, "User location not found");
+//     }
+
+//     const nearestPartner = await PartnerModel.findOne({
+//       isDeleted: false,
+//       autoAssign: true,
+//       location: {
+//         $near: {
+//           $geometry: {
+//             type: "Point",
+//             //   coordinates: user.location.coordinates,
+//             coordinates: booking.location.coordinates,
+//           },
+//           $maxDistance: 10000, // in meters (10 km)
+//         },
+//       },
+//     });
+
+//     if (!nearestPartner) {
+//       return Helper.fail(res, "No auto-assign partner found nearby");
+//     }
+
+//     booking.partnerId = nearestPartner._id;
+//     booking.status = "assigned";
+//     await booking.save();
+
+//     return Helper.success(res, "Partner auto-assigned successfully", booking);
+//   } catch (err) {
+//     console.error(err);
+//     return Helper.error(res, "Something went wrong");
+//   }
+// };
+
 const autoAssignPartner = async (req, res) => {
   try {
     const { bookingId } = req.body;
-    const booking = await BookingModel.findById(bookingId).populate("userId");
-    if (!booking) return Helper.fail(res, "Booking not found");
+    const result = await autoAssignFromBookingId(bookingId);
 
-    const user = booking.userId;
-    if (!user || !user.location || !user.location.coordinates) {
-      return Helper.fail(res, "User location not found");
+    if (!result.success) {
+      return Helper.fail(res, result.message);
     }
 
-    const nearestPartner = await PartnerModel.findOne({
-      isDeleted: false,
-      autoAssign: true,
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            //   coordinates: user.location.coordinates,
-            coordinates: booking.location.coordinates,
-          },
-          $maxDistance: 10000, // in meters (10 km)
-        },
-      },
-    });
-
-    if (!nearestPartner) {
-      return Helper.fail(res, "No auto-assign partner found nearby");
-    }
-
-    booking.partnerId = nearestPartner._id;
-    booking.status = "assigned";
-    await booking.save();
-
-    return Helper.success(res, "Partner auto-assigned successfully", booking);
+    return Helper.success(res, result.message, result.data);
   } catch (err) {
     console.error(err);
     return Helper.error(res, "Something went wrong");

@@ -69,6 +69,9 @@ const PartnerSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isAvailable: {
+        type: Boolean,
+    },
     autoAssign: {
         type: Boolean,
         default: false
@@ -86,12 +89,11 @@ const PartnerSchema = new mongoose.Schema({
         default: ""
     },
     serviceId:[{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "service",
-        },]
+         type: mongoose.Schema.Types.ObjectId,
+         ref: "service",
+    },]
 }, 
  { timestamps: true },
 );
 PartnerSchema.index({ location: "2dsphere" });
-
 module.exports = mongoose.model("partner", PartnerSchema);
