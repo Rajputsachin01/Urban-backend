@@ -32,6 +32,7 @@ const feedbackRoutes = require("./src/routes/feedbackRoutes")
 const notificationRoutes = require("./src/routes/notificationRoutes")
 const jobStatusRoutes = require("./src/routes/JobStatusRoute")
 const reviewRoutes = require("./src/routes/reviewRoutes")
+const cliclAndViewsRoutes = require("./src/routes/clicksAndViewsRoutes")
 
 
 app.use("/v1/admin",adminRoutes);
@@ -47,6 +48,7 @@ app.use("/v1/feedback",feedbackRoutes);
 app.use("/v1/notification",notificationRoutes);
 app.use("/v1/jobStatus",jobStatusRoutes);
 app.use("/v1/review",reviewRoutes);
+app.use("/v1/activity",cliclAndViewsRoutes);
 
 
 
