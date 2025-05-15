@@ -7,5 +7,6 @@ router.post("/createService", serviceController.createService)
 router.post("/updateService/:id", serviceController.updateService)
 router.post("/removeService/:id", serviceController.removeService)
 router.post("/listingService", serviceController.listingService)
+router.post("/findAll", serviceController.findAllServices)
 
 module.exports = router;

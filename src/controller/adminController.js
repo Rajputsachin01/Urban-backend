@@ -1,4 +1,5 @@
 const AdminModel = require("../models/adminModel")
+const UserModel = require("../models/userModel")
 const { signInToken } = require("../utils/auth")
 const Helper = require("../utils/helper")
 const bcrypt = require('bcrypt')
@@ -39,7 +40,7 @@ const registerAdmin = async (req, res) => {
     const {profileImage, firstName, lastName, phoneNo, email, password } = req.body;
     console.log({profileImage, firstName, lastName, phoneNo, email, password })
     // validation for required field
-    if (!profileImage) return Helper.fail(res, "profileImage is required");
+    // if (!profileImage) return Helper.fail(res, "profileImage is required");
     if (!firstName) return Helper.fail(res, "First name is required");
     if (!lastName) return Helper.fail(res, "Last name is required");
     if (!phoneNo) return Helper.fail(res, "Phone number is required");
@@ -257,13 +258,54 @@ const removeAdmin = async (req, res) => {
   }
 }
 
+//for fetching admin Profile
+const fetchProfile = async (req, res) => {
+  try {
+    const adminId = req.userId;
+    const admin = await AdminModel.findById(adminId).select({ password: 0, __v: 0, createdAt: 0, updatedAt: 0 });
+    if (!admin) {
+      return Helper.fail(res, "admin not found");
+    }
+    return Helper.success(res, "Profile fetched successfully", admin);
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, "Failed to fetch profile");
+  }
+};
+
+//for Updating user status by admin
+const updateUserStatus = async (req, res) => {
+  try {
+    const { userId,status } = req.body;
+
+    if (!userId) {
+      return Helper.fail(res, "User ID is required");
+    }
+    const user = await UserModel.findById(userId);
+
+    if (!user) {
+      return Helper.fail(res, "User not found");
+    }
+
+    user.status = status;
+    await user.save();
+
+    return Helper.success(res, "User Status Updated successfully", user);
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, "Failed to Update User Status user");
+  }
+};
+
 
 module.exports = {
   registerAdmin,
   loginAdmin,
   verifyOTP,
   updateAdmin,
-  removeAdmin
+  removeAdmin,
+  fetchProfile,
+  updateUserStatus
 
 };
 

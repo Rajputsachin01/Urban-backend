@@ -16,6 +16,11 @@ router.post("/partnerListing", partnerController.partnerListing)
 router.post("/partnerListingServices", isAuth, partnerController.partnerListingWithServices)
 router.post("/orderAnalytics", isAuth, partnerController.partnerAnalyticsAndOrders)
 router.post("/myEarningsAndJobs", isAuth, partnerController.partnerAnalyticsEarningsWithJobs)
+router.post("/acceptBooking", isAuth, partnerController.acceptBookingRequest);
+router.post("/rejectBooking", isAuth, partnerController.rejectBookingRequest);
+router.post("/listingBookingRequests", isAuth, partnerController.listPartnerBookingRequests);
+router.post("/toggleIsPublished", isAuth, partnerController.toggleIsPublished);
+router.post("/findAll",partnerController.findAllPartners);
 
 
 

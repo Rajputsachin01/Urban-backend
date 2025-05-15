@@ -163,10 +163,29 @@ const listingService = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+const findAllServices = async (req, res) => {
+  try {
+    const services = await ServiceModel.find({
+      isDeleted: false,
+    })
+      .sort({ _id: -1 })
+      .select("name _id"); // Only return name and _id
+
+    if (!services || services.length === 0)
+      return Helper.fail(res, "Services not found");
+
+    return Helper.success(res, "Services found", services);
+  } catch (error) {
+    console.error(error);
+    return Helper.fail(res, "Failed to fetch services");
+  }
+};
+
 
 module.exports = {
   createService,
   removeService,
   listingService,
   updateService,
+  findAllServices
 };

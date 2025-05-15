@@ -464,6 +464,49 @@ const fetchReferralCode = async (req, res) =>{
   return Helper.success(res, "referral code fetched", referralCode)
 }
 
+const listingUser = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "", status } = req.body;
+
+    const query = {
+      isDeleted: { $ne: true },
+    };
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status) {
+      query.status = status; // ✅ apply status filter only if provided
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const total = await UserModel.countDocuments(query);
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    const users = await UserModel
+      .find(query)
+      .skip(skip)
+      .limit(parseInt(limit))
+      .sort({ createdAt: -1 });
+
+    return Helper.success(res, "User list fetched successfully", {
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages,
+      users,
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
+};
+
+
 module.exports = {
   registerUser,
   updateUser,
@@ -474,5 +517,6 @@ module.exports = {
   verifyOTP,
   resendOTP,
   getUserLocation,
-  fetchReferralCode
+  fetchReferralCode,
+  listingUser
 };

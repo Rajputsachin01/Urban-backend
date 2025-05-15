@@ -4,6 +4,8 @@ const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser")
 const cookieParser = require('cookie-parser'); 
+// const cron = require("node-cron");
+// const expireAndReassign = require("./src/utils/expireAndReaasign");
 //cors middleware 
 app.use(cors(
     {
@@ -17,6 +19,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 // For Db connection
 require("./src/utils/db");
+
+
+// cron.schedule("*/1 * * * *", async () => {
+//   console.log("Running partner request expiry check...");
+//   await expireAndReassign();
+// });
+
 
 //Routes
 const userRoutes = require("./src/routes/userRoutes")

@@ -63,6 +63,8 @@ const initiateBooking = async (req, res) => {
     const totalPrice = finalPrice - booking.discountAmount;
     booking.totalPrice = totalPrice;
     booking.price = finalPrice;
+    booking.address = address
+    booking.location = 
     await booking.save();
     return Helper.success(res, "booking intiated", booking);
   } catch (error) {
@@ -108,7 +110,6 @@ const fetchTimeSlots = async (req, res) => {
     if (!bookingId) {
       return Helper.fail(res, "Booking ID is required");
     }
-
     // Fetch booking and populate the service to get the time
     const booking = await BookingModel.findOne({
       _id: bookingId,
@@ -118,11 +119,9 @@ const fetchTimeSlots = async (req, res) => {
     if (!booking || !booking.serviceId || !booking.serviceId.time) {
       return Helper.fail(res, "Service time not found in booking");
     }
-
     const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
     const businessStart = process.env.BUSINESS_START_TIME;
     const businessEnd = process.env.BUSINESS_END_TIME;
-
     const timeSlots = generateTimeSlots(
       businessStart,
       businessEnd,
@@ -134,8 +133,10 @@ const fetchTimeSlots = async (req, res) => {
     return Helper.fail(res, "Failed to generate time slots");
   }
 };
+
 // select date and time slot and saved in booking
-const getDateAndTimeslot = async (req, res) => {
+
+const selectDateAndTimeslot = async (req, res) => {
   try {
     const { date, timeSlot, bookingId } = req.body;
     if (!bookingId) return Helper.fail(res, "bookingId is required");
@@ -479,11 +480,110 @@ const assignPartnerManually = async (req, res) => {
   }
 };
 
+const bookingListing = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const limitVal = parseInt(limit);
+
+    // Base match
+    const matchStage = {
+      isDeleted: false,
+    };
+
+    if (bookingStatus) {
+      matchStage.bookingStatus = bookingStatus;
+    }
+
+    // Aggregation Pipeline
+    const pipeline = [
+      { $match: matchStage },
+      // Populate references
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "categoryId",
+          foreignField: "_id",
+          as: "category",
+        },
+      },
+      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "services",
+          localField: "serviceId",
+          foreignField: "_id",
+          as: "service",
+        },
+      },
+      { $unwind: { path: "$service", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "partners",
+          localField: "partnerId",
+          foreignField: "_id",
+          as: "partner",
+        },
+      },
+      { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+    ];
+
+    // Add search if provided
+    if (search) {
+      pipeline.push({
+        $match: {
+          $or: [
+            { "user.name": { $regex: search, $options: "i" } },
+            { "user.email": { $regex: search, $options: "i" } },
+            { "category.name": { $regex: search, $options: "i" } },
+            { "service.name": { $regex: search, $options: "i" } },
+            { "partner.name": { $regex: search, $options: "i" } },
+          ],
+        },
+      });
+    }
+
+    // Count total
+    const countPipeline = [...pipeline, { $count: "total" }];
+    const countResult = await BookingModel.aggregate(countPipeline);
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+
+    // Add pagination
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: limitVal });
+
+    // Final result
+    const bookings = await BookingModel.aggregate(pipeline);
+
+    return Helper.success(res, "Booking list fetched successfully", {
+      total,
+      page: parseInt(page),
+      limit: limitVal,
+      totalPages: Math.ceil(total / limitVal),
+      bookings,
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
+};
+
 module.exports = {
   initiateBooking,
   getLocationAndAddress,
   fetchTimeSlots,
-  getDateAndTimeslot,
+  selectDateAndTimeslot,
   findBookingById,
   autoAssignPartner,
   getNearbyPartners,
@@ -494,4 +594,6 @@ module.exports = {
   userBookingHistoryOrPending,
   cancelBooking,
   usersBookingListing,
+bookingListing
+  
 };

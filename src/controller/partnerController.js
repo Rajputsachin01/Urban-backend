@@ -3,7 +3,7 @@ const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper");
 const BookingModel = require("../models/bookingModel");
 const { ObjectId } = require("mongodb");
-
+const PartnerRequestModel = require("../models/partnerRequestModel");
 async function getPartnerWithToken(partnerId, type) {
   try {
     let partnerDetail = await partnerProfile(partnerId);
@@ -330,51 +330,29 @@ const fetchProfile = async (req, res) => {
     return Helper.fail(res, "Failed to fetch profile");
   }
 };
-// const servicesForPartner = async (req, res) =>{
-//     try {
-//         const {partnerId} = req.body
-//         if(!partnerId){
-//             return Helper.fail(res, "partner id is required")
-//         }
-//         const services = await PartnerModel.find({_id:partnerId})
-//         .select("-isDeleted -createdAt -updatedAt -__v")
-//         .populate("serviceId", "name")
-//         if(!services){
-//             return Helper.fail(res, "no service available for this partner")
-//         }
-//         return Helper.success(res, "service fetched for the partner", services)
-//     } catch (error) {
-//         console.log(error);
-//         return Helper.fail(res, error.message);
-//     }
-// };
 
 const partnerListing = async (req, res) => {
   try {
-    const { page = 1, limit = 3 } = req.body;
+    const { page = 1, limit = 10, search = "" } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
-
     const matchStage = {
       isDeleted: false,
     };
 
+    if (search) {
+      matchStage.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
     const partnerList = await PartnerModel.find(matchStage)
       .skip(skip)
-      .limit(limitVal);
-
-    // Aggregation pipeline
-    // const partnerList = await PartnerModel.aggregate([
-    //   { $match: matchStage },
-    //   { $skip: skip },
-    //   { $limit: limitVal }
-    // ]);
+      .limit(limitVal)
+      .sort({ createdAt: -1 });
 
     const totalPartners = await PartnerModel.countDocuments(matchStage);
-
-    if (partnerList.length === 0) {
-      return Helper.fail(res, "No partners found");
-    }
 
     const data = {
       partners: partnerList,
@@ -386,9 +364,11 @@ const partnerListing = async (req, res) => {
 
     return Helper.success(res, "Partner listing", data);
   } catch (error) {
+    console.log(error);
     return Helper.fail(res, error.message);
   }
 };
+
 
 const partnerListingWithServices = async (req, res) => {
   try {
@@ -559,6 +539,139 @@ const partnerAnalyticsEarningsWithJobs = async (req, res) => {
 };
 
 
+//for partner to accept the booking if req not autoAssign
+const acceptBookingRequest = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+
+    const request = await PartnerRequestModel.findById(requestId).populate("bookingId");
+    if (!request || request.status !== "pending") {
+      return Helper.fail(res, "Invalid or expired request");
+    }
+
+    const booking = request.bookingId;
+    booking.partnerId = request.partnerId;
+    booking.status = "Progress";
+    await booking.save();
+
+    request.status = "accepted";
+    await request.save();
+
+    return Helper.success(res, "Booking accepted by partner", booking);
+  } catch (err) {
+    console.error("Accept Error:", err);
+    return Helper.fail(res, "Failed to accept booking");
+  }
+};
+//for rejecting the booking request by partner
+const rejectBookingRequest = async (req, res) => {
+  try {
+    const { requestId } = req.body;
+    const partnerId = req.partnerId; // Assume partner is authenticated via middleware
+
+    const request = await PartnerRequestModel.findOne({
+      _id: requestId,
+      partnerId,
+      status: "pending",
+      isDeleted: false,
+    });
+
+    if (!request) {
+      return Helper.fail(res, "Request not found or already handled");
+    }
+
+    request.status = "rejected";
+    await request.save();
+
+    return Helper.success(res, "Booking request rejected successfully", request);
+  } catch (error) {
+    console.error("Reject Booking Request Error:", error);
+    return Helper.error(res, "Failed to reject booking request");
+  }
+};
+//for listing bookings requests for partner
+const listPartnerBookingRequests = async (req, res) => {
+  try {
+    const partnerId = req.userId; 
+    const { page = 1, limit = 10 } = req.body;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const query = {
+      partnerId,
+      status: "pending",
+      isDeleted: false,
+    };
+
+    const [requests, total] = await Promise.all([
+      PartnerRequestModel.find(query)
+        .populate("bookingId")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      PartnerRequestModel.countDocuments(query),
+    ]);
+
+    return Helper.success(res, "Pending booking requests fetched", {
+      requests,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: parseInt(page),
+      limit: parseInt(limit),
+    });
+  } catch (error) {
+    console.error("List booking requests error:", error);
+    return Helper.fail(res, "Unable to fetch partner booking requests");
+  }
+};
+// Partner Ispublished toggle 
+const toggleIsPublished = async (req, res) => {
+  try {
+    const { partnerId } = req.body;
+
+    if (!partnerId) {
+      return Helper.fail(res, "Partner ID is required");
+    }
+
+    const partner = await PartnerModel.findById(partnerId);
+
+    if (!partner) {
+      return Helper.fail(res, "Partner not found");
+    }
+
+    const newStatus = !partner.isPublished;
+
+    partner.isPublished = newStatus;
+    await partner.save();
+
+    return Helper.success(res, `Partner is now ${newStatus ? 'Published' : 'Unpublished'}`, {
+      partnerId: partner._id,
+      isPublished: partner.isPublished,
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, "Something went wrong while toggling publish status");
+  }
+};
+
+const findAllPartners = async (req, res) => {
+  try {
+    const partners = await PartnerModel.find({
+      isDeleted: false,
+    })
+      .sort({ _id: -1 })
+      .select("name _id"); // Only return name and _id
+
+    if (!partners || partners.length === 0)
+      return Helper.fail(res, "Partners not found");
+
+    return Helper.success(res, "Partners found", partners);
+  } catch (error) {
+    console.error(error);
+    return Helper.fail(res, "Failed to fetch partners");
+  }
+};
+
 
 
 
@@ -574,5 +687,10 @@ module.exports = {
   partnerListing,
   partnerListingWithServices,
   partnerAnalyticsAndOrders,
-  partnerAnalyticsEarningsWithJobs
+  partnerAnalyticsEarningsWithJobs,
+  acceptBookingRequest,
+  rejectBookingRequest,
+  listPartnerBookingRequests,
+  toggleIsPublished,
+  findAllPartners
 };

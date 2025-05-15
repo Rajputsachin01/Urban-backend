@@ -33,7 +33,11 @@ const UserSchema = new mongoose.Schema(
       required: true,
       default: [],
     },
-    
+    status:{
+      type:String,
+      enum:["Active","InActive","Blocked"],
+      default:"Active"
+    },
     location: {
       type: {
         type: String,

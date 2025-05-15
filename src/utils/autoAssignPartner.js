@@ -1,9 +1,10 @@
 const BookingModel = require("../models/bookingModel");
 const PartnerModel = require("../models/partnerModel");
+const PartnerRequestModel = require("../models/partnerRequestModel");
 
 const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
   try {
-    const booking = await BookingModel.findById(bookingId).populate("userId");
+    const booking = await BookingModel.findById(bookingId);
     if (!booking) {
       return { success: false, message: "Booking not found" };
     }
@@ -13,16 +14,38 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
       return { success: false, message: "Booking location not found" };
     }
 
-    const nearestPartner = await PartnerModel.findOne({
+    // Step 1: Try auto assign
+    const autoPartner = await PartnerModel.findOne({
       isDeleted: false,
       isAvailable: true,
       autoAssign: true,
       location: {
         $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: location,
-          },
+          $geometry: { type: "Point", coordinates: location },
+          $maxDistance: maxDistanceInKm * 1000,
+        },
+      },
+    });
+
+    if (autoPartner) {
+      booking.partnerId = autoPartner._id;
+      booking.status = "Progress";
+      await booking.save();
+
+      return {
+        success: true,
+        message: "Partner auto-assigned successfully",
+        data: booking,
+      };
+    }
+
+    // Step 2: Send request to nearest available partner
+    const nearestPartner = await PartnerModel.findOne({
+      isDeleted: false,
+      isAvailable: true,
+      location: {
+        $near: {
+          $geometry: { type: "Point", coordinates: location },
           $maxDistance: maxDistanceInKm * 1000,
         },
       },
@@ -32,15 +55,16 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
       return { success: false, message: "No partner found nearby" };
     }
 
-    // Update booking
-    booking.partnerId = nearestPartner._id;
-    booking.status = "assigned";
-    await booking.save();
+    // Create a request
+    await PartnerRequestModel.create({
+      bookingId,
+      partnerId: nearestPartner._id,
+    });
 
     return {
       success: true,
-      message: "Partner auto-assigned successfully",
-      data: booking,
+      message: "No auto-assign partner. Request sent to nearest partner",
+      data: { partnerId: nearestPartner._id },
     };
   } catch (error) {
     console.error("autoAssignFromBookingId error:", error);
@@ -50,5 +74,6 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
     };
   }
 };
+
 
 module.exports = { autoAssignFromBookingId };

@@ -65,7 +65,7 @@ const PartnerSchema = new mongoose.Schema({
         type: Number,
         default: ""
     },
-    isPublish: {
+    isPublished: {
         type: Boolean,
         default: false
     },
