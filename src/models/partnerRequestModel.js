@@ -4,12 +4,12 @@ const PartnerRequestSchema = new mongoose.Schema(
   {
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Booking",
+      ref: "bookings",
       required: true,
     },
     partnerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Partner",
+      ref: "partners",
       required: true,
     },
     status: {

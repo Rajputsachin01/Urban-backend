@@ -1,5 +1,6 @@
 const BookingModel = require("../models/bookingModel");
 const PartnerModel = require("../models/partnerModel");
+const UserModel = require("../models/userModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
 const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
@@ -33,45 +34,65 @@ const initiateBooking = async (req, res) => {
   try {
     const userId = req.userId;
     const { serviceId, categoryId, unitQuantity } = req.body;
-    if (!userId) {
-      return Helper.fail(res, "user id is required");
+
+    if (!userId) return Helper.fail(res, "user id is required");
+    if (!serviceId) return Helper.fail(res, "service id is required");
+    if (!categoryId) return Helper.fail(res, "category id is required");
+    if (!unitQuantity || unitQuantity <= 0) return Helper.fail(res, "Valid unit quantity is required");
+
+    // Step 1: Fetch user details (address[0] and location)
+    const user = await UserModel.findById(userId).select("address location");
+    if (!user) return Helper.fail(res, "User not found");
+
+    const userAddress = user.address?.[0];
+    if (!userAddress) return Helper.fail(res, "User has no saved address");
+
+    const userLocation = user.location;
+    if (
+      !userLocation ||
+      userLocation.type !== "Point" ||
+      !Array.isArray(userLocation.coordinates) ||
+      userLocation.coordinates.length !== 2
+    ) {
+      return Helper.fail(res, "Invalid user location");
     }
-    if (!serviceId) {
-      return Helper.fail(res, "service id is required");
-    }
-    if (!categoryId) {
-      return Helper.fail(res, "category id is required");
-    }
-    if (!unitQuantity || unitQuantity <= 0)
-      return Helper.fail(res, "Valid unit quantity is required");
+
+    // Step 2: Create booking with user's address and location
     const booking = await BookingModel.create({
       userId,
       serviceId,
       categoryId,
       unitQuantity,
+      address: userAddress,
+      location: userLocation,
     });
-    if (!booking) {
-      return Helper.fail(res, "booking not initiate");
-    }
+
+    if (!booking) return Helper.fail(res, "Booking not initiated");
+
+    // Step 3: Calculate price
     const categoryPrice = await BookingModel.findOne({
-      categoryId: categoryId,
+      categoryId,
       _id: booking._id,
     }).populate("categoryId", "price");
-    const calculatePrice = categoryPrice.categoryId.price;
-    const finalPrice = unitQuantity * calculatePrice;
-    // remaining: need to fetch the discount amount
-    const totalPrice = finalPrice - booking.discountAmount;
-    booking.totalPrice = totalPrice;
+
+    const unitPrice = categoryPrice?.categoryId?.price || 0;
+    const finalPrice = unitQuantity * unitPrice;
+    const discountAmount = booking.discountAmount || 0;
+    const totalPrice = finalPrice - discountAmount;
+
     booking.price = finalPrice;
-    booking.address = address
-    booking.location = 
+    booking.totalPrice = totalPrice;
+
     await booking.save();
-    return Helper.success(res, "booking intiated", booking);
+
+    return Helper.success(res, "Booking initiated successfully", booking);
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, "failed to booking initiate");
+    return Helper.fail(res, "Failed to initiate booking");
   }
 };
+
+
 // get location and address
 const getLocationAndAddress = async (req, res) => {
   try {
@@ -152,8 +173,6 @@ const selectDateAndTimeslot = async (req, res) => {
     if (!dateAndTime) {
       return Helper.fail(res, "Booking not found or already deleted");
     }
-
-    // ✅ Auto-assign partner after slot selection
     const assignResult = await autoAssignFromBookingId(bookingId);
 
     if (!assignResult.success) {
