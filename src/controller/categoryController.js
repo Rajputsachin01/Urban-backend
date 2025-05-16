@@ -190,7 +190,6 @@ const listingCategory = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 // fetch categories for service
 const categoriesForService = async (req, res) => {
   try {
@@ -214,7 +213,6 @@ const categoriesForService = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 module.exports = {
   createCategory,
   updateCategory,
