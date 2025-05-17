@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
 const serviceController = require("../controller/serviceController");
+const {isAuth,} = require("../utils/auth")
 
 /*--------------------------------service Routes-------------------------------*/
-router.post("/createService", serviceController.createService)
-router.post("/updateService/:id", serviceController.updateService)
-router.post("/removeService/:id", serviceController.removeService)
-router.post("/listingService", serviceController.listingService)
-router.post("/findAll", serviceController.findAllServices)
+router.post("/create",isAuth, serviceController.createService)
+router.post("/update/:id", isAuth,serviceController.updateService)
+router.post("/remove/:id",isAuth, serviceController.removeService)
+router.post("/listing", serviceController.listingService)
+router.post("/serviceBySubCategory", serviceController.serviceBySubCategoryId)
 
 module.exports = router;

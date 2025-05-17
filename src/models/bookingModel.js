@@ -9,10 +9,6 @@ const BookingSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId, ref: "service",
         required: true
     },
-    categoryId :{
-       type: mongoose.Schema.Types.ObjectId, ref: "categories",
-        required: true
-    },
     partnerId: {
         type: mongoose.Schema.Types.ObjectId, ref: "partner",
         // required: true,

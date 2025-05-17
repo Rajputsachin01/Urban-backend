@@ -33,11 +33,11 @@ const generateTimeSlots = (startTime, endTime, duration) => {
 const initiateBooking = async (req, res) => {
   try {
     const userId = req.userId;
-    const { serviceId, categoryId, unitQuantity } = req.body;
+    const { serviceId, subCategoryId, unitQuantity } = req.body;
 
     if (!userId) return Helper.fail(res, "user id is required");
     if (!serviceId) return Helper.fail(res, "service id is required");
-    if (!categoryId) return Helper.fail(res, "category id is required");
+    if (!subCategoryId) return Helper.fail(res, "subCategoryId id is required");
     if (!unitQuantity || unitQuantity <= 0) return Helper.fail(res, "Valid unit quantity is required");
 
     // Step 1: Fetch user details (address[0] and location)
@@ -61,7 +61,7 @@ const initiateBooking = async (req, res) => {
     const booking = await BookingModel.create({
       userId,
       serviceId,
-      categoryId,
+      subCategoryId,
       unitQuantity,
       address: userAddress,
       location: userLocation,
@@ -70,12 +70,12 @@ const initiateBooking = async (req, res) => {
     if (!booking) return Helper.fail(res, "Booking not initiated");
 
     // Step 3: Calculate price
-    const categoryPrice = await BookingModel.findOne({
-      categoryId,
+    const cservicePrice = await BookingModel.findOne({
+      serviceId,
       _id: booking._id,
-    }).populate("categoryId", "price");
+    }).populate("serviceId", "price");
 
-    const unitPrice = categoryPrice?.categoryId?.price || 0;
+    const unitPrice = servicePrice?.serviceId?.price || 0;
     const finalPrice = unitQuantity * unitPrice;
     const discountAmount = booking.discountAmount || 0;
     const totalPrice = finalPrice - discountAmount;
@@ -91,8 +91,6 @@ const initiateBooking = async (req, res) => {
     return Helper.fail(res, "Failed to initiate booking");
   }
 };
-
-
 // get location and address
 const getLocationAndAddress = async (req, res) => {
   try {
@@ -319,7 +317,7 @@ const userBookingHistoryOrPending = async (req, res) => {
       .select("-createdAt -updatedAt -isDeleted -__v")
       .populate("userId", "email phoneNo -_id ")
       .populate("serviceId", "name price -_id")
-      .populate("categoryId", "name price -_id")
+      .populate("subCategoryId", "name price -_id")
       .populate("partnerId", "name phoneNo -_id");
     if (!result) {
       return Helper.fail(res, "no result available");

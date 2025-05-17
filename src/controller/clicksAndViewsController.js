@@ -4,20 +4,33 @@ const Helper = require("../utils/helper");
 const createClickOrView = async (req, res) => {
   try {
     const { activity, purpose, activityDate } = req.body;
+    const { userId, type } = req; 
+
     if (!activity) return Helper.fail(res, "Activity is required");
+    let partnerId = null;
+    let endUserId = null;
+
+    if (type === "partner") {
+      partnerId = userId;
+    } else if (type === "user") {
+      endUserId = userId;
+    }
+
     const newActivity = await ClicksAndViewsModel.create({
-      partnerId: req.userId,
-      userId: req.body.userId || null,
+      partnerId,
+      userId: endUserId,
       activity,
       purpose,
       activityDate: activityDate || new Date(),
     });
+
     return Helper.success(res, "Activity logged successfully", newActivity);
   } catch (error) {
     console.error("Create Click/View Error:", error);
     return Helper.fail(res, error.message || "Internal server error");
   }
 };
+
 //for  remove (soft Delete) 
 const removeClickOrView = async (req, res) => {
     try {

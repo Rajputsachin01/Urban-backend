@@ -1,47 +1,52 @@
 const ServiceModel = require("../models/serviceModel");
+const SubCategoryModel = require("../models/subCategoryModel"); // for populate category too
 const Helper = require("../utils/helper");
 const mongoose = require("mongoose");
 mongoose.set("strictPopulate", false);
 
+
 const createService = async (req, res) => {
   try {
-    const { name, price, time, images, description, type, categories } = req.body;
+    const {
+      name,
+      price,
+       time,
+      description,
+      subCategoryId,
+      sellingType,
+      size,
+      seat,
+      piece,
+      icon,
+    } = req.body;
 
-    if (!name) {
-      return Helper.fail(res, "Name is required!");
-    }
-    if (!price) {
-      return Helper.fail(res, "Price is required!");
-    }
-    if (!time) {
-      return Helper.fail(res, "Time is required!");
-    }
-    if (!images) {
-      return Helper.fail(res, "images is required!");
-    }
-    if (!description) {
-      return Helper.fail(res, "Description is required!");
-    }
-    if (!type) {
-      return Helper.fail(res, "Type is required!");
-    }
-    if (!categories) {
-      return Helper.fail(res, "Categories is required!");
-    }
+    // Validate required fields
+    if (!name) return Helper.fail(res, "Name is required!");
+    if (!sellingType) return Helper.fail(res, "Selling type is required!");
+    if (!time) return Helper.fail(res, "Please fill the time to complete the service");
+    if (!subCategoryId)
+      return Helper.fail(res, "SubCategory ID is required!");
+
+    // Optional: You can add more validation if needed
+
     const data = {
       name,
       price,
       time,
-      images,
       description,
-      type,
-      categories,
+      subCategoryId,
+      sellingType,
+      size: size || "",
+      seat: seat || 0,
+      piece: piece || 0,
+      icon: icon || "",
     };
-    const create = await ServiceModel.create(data);
-    if (!create) {
-      return Helper.fail({ error: "data not saved" });
-    }
-    return Helper.success(res, "service created successfully!", create);
+
+    const createdService = await ServiceModel.create(data);
+    if (!createdService)
+      return Helper.fail(res, "Failed to create service");
+
+    return Helper.success(res, "Service created successfully!", createdService);
   } catch (error) {
     return Helper.fail(res, error.message);
   }
@@ -50,82 +55,71 @@ const createService = async (req, res) => {
 const removeService = async (req, res) => {
   try {
     const id = req.params.id;
-    if (!id) {
-      return Helper.fail(res, "Service id required");
-    }
-    const isRemoved = await ServiceModel.findByIdAndUpdate(id, {
+    if (!id) return Helper.fail(res, "Service id required");
+
+    const removed = await ServiceModel.findByIdAndUpdate(id, {
       isDeleted: true,
     });
-    return Helper.success(res, "Service remove Successfully", isRemoved);
+
+    return Helper.success(res, "Service removed successfully", removed);
   } catch (error) {
     console.log(error);
     return Helper.fail(res, error.message);
   }
 };
 
-
 const updateService = async (req, res) => {
   try {
     const serviceId = req.params.id;
-    const { name, price, time, images, description, type, categories } =
-      req.body;
-    const isExist = await ServiceModel.findById(serviceId);
-    if (isExist && isExist.isDeleted == true) {
-      return Helper.fail(res, "Service no longer exist");
-    }
-    if (!isExist) {
-      return Helper.fail(res, "Service not exist");
-    }
+    const {
+      name,
+      price,
+      time,
+      description,
+      subCategoryId,
+      sellingType,
+      size,
+      seat,
+      piece,
+      icon,
+    } = req.body;
+
+    const service = await ServiceModel.findById(serviceId);
+    if (!service) return Helper.fail(res, "Service not exist");
+    if (service.isDeleted) return Helper.fail(res, "Service no longer exists");
+
     let updatedService = {};
-    if (name) {
-      updatedService.name = name;
-    }
-    if (price) {
-      updatedService.price = price;
-    }
-    if (time) {
-      updatedService.time = time;
-    }
-    if (images) {
-      updatedService.images = images;
-    }
-    if (description) {
-      updatedService.description = description;
-    }
-    if (type) {
-      updatedService.type = type;
-    }
-    if (categories) {
-      updatedService.categories = categories;
-    }
-    console.log(updatedService);
-    const serviceUpdate = await ServiceModel.findByIdAndUpdate(
-      serviceId,
-      updatedService,
-      {
-        new: true,
-      }
-    );
-    if (!serviceUpdate) {
-      return Helper.fail(res, "service not updated");
-    }
-    return Helper.success(res, "Service updated successfully", serviceUpdate);
+    if (name) updatedService.name = name;
+    if (price !== undefined) updatedService.price = price;
+    if (time !== undefined) updatedService.time = time;
+    if (description) updatedService.description = description;
+    if (subCategoryId) updatedService.subCategoryId = subCategoryId;
+    if (sellingType) updatedService.sellingType = sellingType;
+    if (size !== undefined) updatedService.size = size;
+    if (seat !== undefined) updatedService.seat = seat;
+    if (piece !== undefined) updatedService.piece = piece;
+    if (icon !== undefined) updatedService.icon = icon;
+
+    const updated = await ServiceModel.findByIdAndUpdate(serviceId, updatedService, {
+      new: true,
+    });
+
+    if (!updated) return Helper.fail(res, "Service not updated");
+
+    return Helper.success(res, "Service updated successfully", updated);
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, "failed to update service");
+    return Helper.fail(res, "Failed to update service");
   }
 };
 
 const listingService = async (req, res) => {
   try {
-    const { search, page = 1, limit = 3 } = req.body;
+    const { search, page = 1, limit = 10} = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
-    // Build match stage
-    const matchStage = {
-      isDeleted: false,
-    };
+    let matchStage = { isDeleted: false };
 
     if (search) {
       const isNumber = !isNaN(search);
@@ -134,58 +128,75 @@ const listingService = async (req, res) => {
       } else {
         matchStage.$or = [
           { name: { $regex: search, $options: "i" } },
-          { type: { $regex: search, $options: "i" } },
+          { sellingType: { $regex: search, $options: "i" } },
+          { description: { $regex: search, $options: "i" } },
         ];
       }
     }
 
-    const serviceList = await ServiceModel.find(matchStage)
+    const services = await ServiceModel.find(matchStage)
+      .populate({
+        path: "subCategoryId",
+        select: "name categoryId",
+        populate: {
+          path: "categoryId",
+          select: "name",
+        },
+      })
       .skip(skip)
-      .limit(limitVal);;
+      .limit(limitVal);
 
-    const totalServices = await ServiceModel.countDocuments(matchStage);
+    const total = await ServiceModel.countDocuments(matchStage);
 
-    if (serviceList.length === 0) {
-      return Helper.fail(res, "No service found matching the criteria");
+    if (services.length === 0) {
+      return Helper.fail(res, "No services found matching the criteria");
     }
 
-    const data = {
-      services: serviceList,
-      totalServices,
-      totalPages: Math.ceil(totalServices / limitVal),
+    return Helper.success(res, "Services listing fetched", {
+      services,
+      total,
+      totalPages: Math.ceil(total / limitVal),
       currentPage: parseInt(page),
       limit: limitVal,
-    };
-
-    return Helper.success(res, "Services listing fetched", data);
+    });
   } catch (error) {
     console.error(error);
     return Helper.fail(res, error.message);
   }
 };
-const findAllServices = async (req, res) => {
+
+
+
+const serviceBySubCategoryId = async (req, res) => {
   try {
+    const { subCategoryId } = req.params;
+    if (!subCategoryId) return Helper.fail(res, "SubCategory ID is required");
+
     const services = await ServiceModel.find({
+      subCategoryId,
       isDeleted: false,
-    })
-      .sort({ _id: -1 })
-      .select("name _id"); // Only return name and _id
+    }).populate({
+      path: "subCategoryId",
+      select: "name categoryId",
+      populate: {
+        path: "categoryId",
+        select: "name",
+      },
+    });
 
-    if (!services || services.length === 0)
-      return Helper.fail(res, "Services not found");
+    if (!services.length) return Helper.fail(res, "No services found for this SubCategory");
 
-    return Helper.success(res, "Services found", services);
+    return Helper.success(res, "Services fetched by SubCategory", services);
   } catch (error) {
     console.error(error);
-    return Helper.fail(res, "Failed to fetch services");
+    return Helper.fail(res, error.message);
   }
 };
-
 
 module.exports = {
   createService,
   removeService,
   listingService,
   updateService,
-  findAllServices
+  serviceBySubCategoryId,
 };

@@ -1,50 +1,54 @@
 const mongoose = require("mongoose")
 
 const ServiceSchema = new mongoose.Schema({
+    icon : {
+        type : String,
+        default : ""
+    },
     name: {
         type: String,
-        required: true,
         default: "",
+        required: true
     },
-    price: {
-        type: Number,
-        required: true,
-        default: 0,
-    },
-    time: {
+     time: {
         type: String,
         required: true,
-        default: "",
-    },
-    images: {
-        type:[ String ],
         default: "",
     },
     description: {
         type: String,
-        required: true,
-        default: "",
+        default: ""
     },
-    type: {
-        type: String,
-        required: true,
-        default: "",
-    },
-    categories: [{
+    subCategoryId:{
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'categories',
-        required: true,
-      }],
-    isPublish: {
+        ref: "subCategories",
+    },
+    sellingType: {
+        type: String,
+        enum : ["sqft", "seat", "piece"],
+        required : true
+    },
+    size: {
+        type: String,
+        default: ""
+    },
+    price:{
+        type: Number,
+        default: ""
+    },
+    seat: {
+        type: Number,
+        default: ""
+    },
+    piece: {
+        type: Number,
+        default: ""
+    },
+    isDeleted:{
         type: Boolean,
         default: false
-    },
-    isDeleted: {
-        type: Boolean,
-        default: false
-    },
-}, 
- { timestamps: true },
-);
+    }
+},
+ { timestamps: true})
 
-module.exports = mongoose.model("service", ServiceSchema);
+module.exports = mongoose.model("services", ServiceSchema)

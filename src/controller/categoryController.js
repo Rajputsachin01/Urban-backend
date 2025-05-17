@@ -1,223 +1,166 @@
 const CategoryModel = require("../models/categoryModel");
 const Helper = require("../utils/helper");
 
-// create category
+// Create Category
 const createCategory = async (req, res) => {
   try {
-    const {
-      icon,
-      name,
-      description,
-      sellingType,
-      size,
-      price,
-      seat,
-      piece,
-      serviceId,
-    } = req.body;
-    if (!icon) return Helper.fail(res, "Category icon is required");
+    const { name, price, images, description, isPublish } = req.body;
+
     if (!name) return Helper.fail(res, "Category name is required");
-    if (!description)
-      return Helper.fail(res, "Category description is required");
-    if (!sellingType)
-      return Helper.fail(res, "Category sellingType is required");
-    if (!serviceId) return Helper.fail(res, "Category serviceId is required");
-    // check if category already exist
-    const categoryCheck = await CategoryModel.findOne({ name });
-    if (categoryCheck) {
-      return Helper.fail(res, "category already exist");
+    if (!price) return Helper.fail(res, "Category price is required");
+    if (!description) return Helper.fail(res, "Category description is required");
+
+    const existingCategory = await CategoryModel.findOne({ name, isDeleted: false });
+    if (existingCategory) {
+      return Helper.fail(res, "Category already exists");
     }
-    const createCategory = await CategoryModel.create({
-      icon,
+
+    const newCategory = await CategoryModel.create({
       name,
-      description,
-      sellingType,
-      serviceId,
-      size,
       price,
-      seat,
-      piece,
+      images: Array.isArray(images) ? images : [], // Fallback if not array
+      description,
+      isPublish: isPublish || false,
     });
-    if (!createCategory) {
-      return Helper.fail(res, "category not create");
-    }
-    return Helper.success(res, "category created successfuly", createCategory);
+
+    return Helper.success(res, "Category created successfully", newCategory);
   } catch (error) {
     console.log(error);
     return Helper.fail(res, error.message);
   }
 };
-// update category
+
+// Update Category
 const updateCategory = async (req, res) => {
   try {
-    const categoryId = req.params.id;
-    const { icon, name, description, sellingType, size, price, seat, piece } =
-      req.body;
-    if (!categoryId) {
-      return Helper.fail(res, "category id is required");
-    }
-    const categoryCheck = await CategoryModel.findById(categoryId);
-    if (categoryCheck && categoryCheck.isDeleted == true) {
-      return Helper.fail(res, "category not found");
-    }
-    if (!categoryCheck) {
-      return Helper.fail(res, "category not found");
-    }
-    const updateObj = {};
-    if (name) {
-      const isExist = await CategoryModel.findOne({
-        name: name,
-        _id: { $ne: categoryId },
-      });
-      if (isExist) {
-        return Helper.fail(res, "category name is already used");
-      }
-      updateObj.name = name;
+    const { id } = req.params;
+    const { name, price, images, description, isPublish } = req.body;
+
+    if (!id) return Helper.fail(res, "Category ID is required");
+
+    const existing = await CategoryModel.findById(id);
+    if (!existing || existing.isDeleted) {
+      return Helper.fail(res, "Category not found");
     }
 
-    if (description) {
-      updateObj.description = description;
+    const duplicateName = await CategoryModel.findOne({
+      name,
+      _id: { $ne: id },
+      isDeleted: false,
+    });
+    if (name && duplicateName) {
+      return Helper.fail(res, "Category name already exists");
     }
-    if (icon) {
-      updateObj.icon = icon;
-    }
-    if (sellingType) {
-      updateObj.sellingType = sellingType;
-    }
-    if (size) {
-      updateObj.size = size;
-    }
-    if (price) {
-      updateObj.price = price;
-    }
-    if (seat) {
-      updateObj.seat = seat;
-    }
-    if (piece) {
-      updateObj.piece = piece;
-    }
-    const categoryUpdate = await CategoryModel.findByIdAndUpdate(
-      categoryId,
-      updateObj,
+
+    const updated = await CategoryModel.findByIdAndUpdate(
+      id,
+      {
+        ...(name && { name }),
+        ...(price !== undefined && { price }),
+        ...(description && { description }),
+        ...(images && Array.isArray(images) && { images }),
+        ...(typeof isPublish === "boolean" && { isPublish }),
+      },
       { new: true }
     );
-    if (!categoryUpdate) {
-      return Helper.fail(res, "category not updated");
-    }
-    return Helper.success(res, "category updated successfully", categoryUpdate);
+
+    return Helper.success(res, "Category updated successfully", updated);
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, error.error);
+    return Helper.fail(res, error.message);
   }
 };
-// find category by id
+
+// Find Category by ID
 const findCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!id) {
-      return Helper.fail(res, "categoryId is required");
-    }
+    if (!id) return Helper.fail(res, "Category ID is required");
+
     const category = await CategoryModel.findOne({ _id: id, isDeleted: false });
-    if (!category) {
-      return Helper.fail(res, "category not found");
-    }
-    return Helper.success(res, "category found successfuly", category);
+    if (!category) return Helper.fail(res, "Category not found");
+
+    return Helper.success(res, "Category found successfully", category);
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, "failed to find");
+    return Helper.fail(res, error.message);
   }
 };
-// soft delete category
+
+// Soft Delete Category
 const removeCategory = async (req, res) => {
   try {
     const { categoryId } = req.body;
-    if (!categoryId) {
-      return Helper.fail(res, "category id required");
-    }
-    let id = { _id: categoryId };
-    const isRemoved = await CategoryModel.findOneAndUpdate(
-      id,
+    if (!categoryId) return Helper.fail(res, "Category ID is required");
+
+    const deleted = await CategoryModel.findByIdAndUpdate(
+      categoryId,
       { isDeleted: true },
       { new: true }
     );
-    if (!isRemoved) {
-      return Helper.fail(res, "no category found");
-    }
-    return Helper.success(res, "category deleted successfully");
+    if (!deleted) return Helper.fail(res, "Category not found");
+
+    return Helper.success(res, "Category deleted successfully");
   } catch (error) {
     console.log(error);
-    return Helper.fail(res, "failed to delete category");
+    return Helper.fail(res, error.message);
   }
 };
-// listing and search by sellingType category (INCLUDE GLOBAL SEARCH)
+
+// List Categories with Search
 const listingCategory = async (req, res) => {
   try {
-    const { search, limit = 3, page = 1, sellingType } = req.body;
+    const { search, limit = 10, page = 1, isPublish } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    let matchStage = { isDeleted: false };
+    const query = { isDeleted: false };
+
     if (search) {
-      matchStage.$or = [
-        { sellingType: { $regex: search, $options: "i" } },
+      query.$or = [
         { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
-    if (sellingType && sellingType.length > 0) {
-      matchStage.sellingType = sellingType;
+
+    if (typeof isPublish === "boolean") {
+      query.isPublish = isPublish;
     }
-    const categoryList = await CategoryModel.find(matchStage)
-      .skip(skip)
-      .limit(parseInt(limit));
-    const totalcategories = await CategoryModel.countDocuments(matchStage);
-    if (categoryList.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No category found matching the criteria",
-      });
-    }
-    const data = {
-      categories: categoryList,
+
+    const categories = await CategoryModel.find(query).skip(skip).limit(parseInt(limit));
+    const total = await CategoryModel.countDocuments(query);
+
+    if (!categories.length) return Helper.fail(res, "No categories found");
+
+    return Helper.success(res, "Categories fetched successfully", {
+      categories,
       pagination: {
-        totalcategories,
-        totalPages: Math.ceil(totalcategories / limit),
+        total,
+        totalPages: Math.ceil(total / limit),
         currentPage: parseInt(page),
         limit: parseInt(limit),
       },
-    };
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
+};
 
-    return Helper.success(res, "category listing fetched", data);
-  } catch (error) {
-    console.log(error);
-    return Helper.fail(res, error.message);
-  }
-};
-// fetch categories for service
-const categoriesForService = async (req, res) => {
+// Fetch All Categories
+const findAllCategories = async (req, res) => {
   try {
-    const { serviceId } = req.body;
-    if (!serviceId) {
-      return Helper.fail(res, "service id is required");
-    }
-    const categories = await CategoryModel.find({ serviceId })
-      .select("-isDeleted -createdAt -updatedAt -__v")
-      .populate("serviceId", "name", "time");
-    if (!categories) {
-      return Helper.fail(res, "no category available for this service");
-    }
-    return Helper.success(
-      res,
-      "categories fetched for the service",
-      categories
-    );
+    const categories = await CategoryModel.find({ isDeleted: false });
+    return Helper.success(res, "All categories fetched", categories);
   } catch (error) {
     console.log(error);
     return Helper.fail(res, error.message);
   }
 };
+
 module.exports = {
   createCategory,
   updateCategory,
   removeCategory,
   listingCategory,
   findCategoryById,
-  categoriesForService,
+  findAllCategories,
 };

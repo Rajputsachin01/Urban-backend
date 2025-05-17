@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const { isAuth } = require("../utils/auth");
-const { createCategory, updateCategory, removeCategory, listingCategory, findCategoryById, categoriesForService } = require("../controller/categoryController")
+const { createCategory, updateCategory, removeCategory, listingCategory, findCategoryById, findAllCategories } = require("../controller/categoryController")
 
-/*--------------------------------user Routes-------------------------------*/
-router.post("/create", createCategory)
-router.post("/update/:id", updateCategory)
-router.post("/find/:id", findCategoryById)
-router.post("/remove", removeCategory)
+/*--------------------------------Category Routes-------------------------------*/
+router.post("/create", isAuth,createCategory)
+router.post("/update/:id",isAuth, updateCategory)
+router.post("/findById/:id", isAuth,findCategoryById)
+router.post("/remove",isAuth, removeCategory)
 router.post("/listing", listingCategory)
-router.post("/categoriesForService", categoriesForService)
+router.post("/findAll", findAllCategories)
 
 module.exports = router;
