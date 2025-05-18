@@ -4,11 +4,11 @@ const Helper = require("../utils/helper");
 const createOffer = async (req, res) => {
   try {
     const adminId = req.userId;
-    const { serviceId, categoryId, image, title, startDate, endDate} = req.body;
+    const { serviceId, image, title, startDate, endDate} = req.body;
     if (!serviceId) {
       return Helper.fail(res, "ServiceId is required!");
     }
-    const data = { adminId, serviceId, categoryId, image, title, startDate, endDate};
+    const data = { adminId, serviceId, image, title, startDate, endDate};
     const create = await OfferModel.create(data);
     if (!create) {
       return Helper.fail({ error: "data not saved" });

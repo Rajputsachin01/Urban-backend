@@ -10,9 +10,7 @@ const createSubCategory = async (req, res) => {
     if (!name) return Helper.fail(res, "SubCategory name is required");
     if (!description) return Helper.fail(res, "SubCategory description is required");
     if (!categoryId) return Helper.fail(res, "Category ID is required");
-    if (!price) return Helper.fail(res, "Price is required");
-    if (!time) return Helper.fail(res, "Time is required");
-
+    
     const subCategoryExists = await SubCategoryModel.findOne({ name });
     if (subCategoryExists) {
       return Helper.fail(res, "SubCategory already exists");

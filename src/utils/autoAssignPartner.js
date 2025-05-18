@@ -9,9 +9,11 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
       return { success: false, message: "Booking not found" };
     }
 
-    const location = booking.location?.coordinates;
-    if (!location) {
-      return { success: false, message: "Booking location not found" };
+       const location = booking.location?.coordinates;
+    const serviceId = booking.serviceId;
+
+    if (!location || !serviceId) {
+      return { success: false, message: "Booking location or serviceId missing" };
     }
 
     // Step 1: Try auto assign
@@ -19,6 +21,7 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
       isDeleted: false,
       isAvailable: true,
       autoAssign: true,
+       services: serviceId,
       location: {
         $near: {
           $geometry: { type: "Point", coordinates: location },
@@ -43,6 +46,7 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20) => {
     const nearestPartner = await PartnerModel.findOne({
       isDeleted: false,
       isAvailable: true,
+      services: serviceId,
       location: {
         $near: {
           $geometry: { type: "Point", coordinates: location },

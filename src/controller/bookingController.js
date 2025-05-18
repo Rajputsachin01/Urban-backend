@@ -443,29 +443,38 @@ const autoAssignPartner = async (req, res) => {
 const getNearbyPartners = async (req, res) => {
   try {
     const { bookingId } = req.body;
+
     const booking = await BookingModel.findById(bookingId).populate("userId");
     if (!booking) return Helper.fail(res, "Booking not found");
+
     const user = booking.userId;
+    const serviceId = booking.serviceId;
+
     if (!user || !user.location || !user.location.coordinates) {
       return Helper.fail(res, "User location not found");
     }
+
+    if (!serviceId) {
+      return Helper.fail(res, "Service ID not found in booking");
+    }
+
     const partners = await PartnerModel.find({
       isDeleted: false,
+      services: serviceId, // 🔥 only those who provide this service
       location: {
         $near: {
           $geometry: {
             type: "Point",
-            //   coordinates: user.location.coordinates
-            coordinates: booking.location.coordinates,
+            coordinates: booking.location.coordinates, // or user.location.coordinates
           },
-          $maxDistance: 20000, //for static maximum 20 kn range
+          $maxDistance: 20000, // 20 km
         },
       },
     });
 
     return Helper.success(
       res,
-      "Nearby partners fetched successfully",
+      "Nearby partners for the service fetched successfully",
       partners
     );
   } catch (err) {

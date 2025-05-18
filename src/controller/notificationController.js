@@ -5,12 +5,12 @@ const createNotification = async (req, res) => {
     try {
         // const userId = req.userId
         // const type = req.type
-        const { icon, title, description, objectId, type, categoryId } = req.body
+        const { icon, title, description, objectId, type, serviceId } = req.body
         if (!objectId) {
             return Helper.fail(res, "objectId is required")
         }
-        if (!categoryId) {
-            return Helper.fail(res, "categoryId is required")
+        if (!serviceId) {
+            return Helper.fail(res, "serviceId is required")
         }
         if (!type) {
             return Helper.fail(res, "type required")
@@ -28,7 +28,7 @@ const createNotification = async (req, res) => {
             icon,
             title,
             description,
-            categoryId
+            serviceId
         };
         if (type === "user") {
             notificationData.userId = objectId;

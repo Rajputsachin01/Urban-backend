@@ -7,7 +7,6 @@ const createCategory = async (req, res) => {
     const { name, price, images, description, isPublish } = req.body;
 
     if (!name) return Helper.fail(res, "Category name is required");
-    if (!price) return Helper.fail(res, "Category price is required");
     if (!description) return Helper.fail(res, "Category description is required");
 
     const existingCategory = await CategoryModel.findOne({ name, isDeleted: false });

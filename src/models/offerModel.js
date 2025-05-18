@@ -3,18 +3,13 @@ const mongoose = require("mongoose")
 const OfferSchema = new mongoose.Schema({
     serviceId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "service",
+        ref: "services",
         // required: true
     },
     adminId:{
         type: mongoose.Schema.Types.ObjectId, 
         ref: "admin",
         // required: true
-    },
-    categoryId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "categories",
-                
     },
     image: {
         type: String,

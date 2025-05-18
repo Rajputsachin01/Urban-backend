@@ -45,7 +45,7 @@ const createPartner = async (req, res) => {
       drivingLicence,
       identityCard,
       createdBy,
-      serviceId,
+      services
     } = req.body;
 
     // Validation for required fields
@@ -82,8 +82,8 @@ const createPartner = async (req, res) => {
     if (!createdBy) {
       return Helper.fail(res, "CreatedBy is required!");
     }
-    if (!serviceId) {
-      return Helper.fail(res, "serviceId is required!");
+    if (!services) {
+      return Helper.fail(res, "services is required!");
     }
 
     if (createdBy === "admin") {
@@ -99,7 +99,7 @@ const createPartner = async (req, res) => {
         drivingLicence,
         identityCard,
         isVerified: true,
-        serviceId,
+        services,
       };
       const create = await PartnerModel.create(data);
 
@@ -137,7 +137,7 @@ const createPartner = async (req, res) => {
         identityCard,
         isVerified: false,
         otp,
-        serviceId,
+        services,
       };
 
       const create = await PartnerModel.create(data);
@@ -336,10 +336,8 @@ const partnerListing = async (req, res) => {
     const { page = 1, limit = 10, search = "" } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
-    const matchStage = {
-      isDeleted: false,
-    };
 
+    const matchStage = { isDeleted: false };
     if (search) {
       matchStage.$or = [
         { name: { $regex: search, $options: "i" } },
@@ -348,6 +346,7 @@ const partnerListing = async (req, res) => {
     }
 
     const partnerList = await PartnerModel.find(matchStage)
+      .populate({ path: "services", select: "name" }) 
       .skip(skip)
       .limit(limitVal)
       .sort({ createdAt: -1 });
@@ -368,7 +367,6 @@ const partnerListing = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 
 const partnerListingWithServices = async (req, res) => {
   try {
@@ -537,8 +535,6 @@ const partnerAnalyticsEarningsWithJobs = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
-
 //for partner to accept the booking if req not autoAssign
 const acceptBookingRequest = async (req, res) => {
   try {
@@ -594,9 +590,7 @@ const listPartnerBookingRequests = async (req, res) => {
   try {
     const partnerId = req.userId; 
     const { page = 1, limit = 10 } = req.body;
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
-
     const query = {
       partnerId,
       status: "pending",

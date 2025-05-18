@@ -88,7 +88,7 @@ const PartnerSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    serviceId:[{
+    services:[{
          type: mongoose.Schema.Types.ObjectId,
          ref: "service",
     },]

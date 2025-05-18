@@ -1,10 +1,10 @@
 const mongoose = require("mongoose")
 
 const reviewSchema = new mongoose.Schema({
-    categoryId: {
-        type: String,
-        required: true,
-    },
+    serviceId:{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "services",
+       },
     partnerId: {
         type: String,
         required: true,

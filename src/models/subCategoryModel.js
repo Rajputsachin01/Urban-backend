@@ -7,12 +7,10 @@ const SubCategorySchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        required: true,
         default: 0,
     },
     time: {
         type: String,
-        required: true,
         default: "",
     },
     images: {
