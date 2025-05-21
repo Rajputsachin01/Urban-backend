@@ -4,7 +4,7 @@ const Helper = require("../utils/helper");
 // Create Category
 const createCategory = async (req, res) => {
   try {
-    const { name, price, images, description, isPublish } = req.body;
+    const { name, images, description } = req.body;
 
     if (!name) return Helper.fail(res, "Category name is required");
     if (!description) return Helper.fail(res, "Category description is required");
@@ -16,10 +16,8 @@ const createCategory = async (req, res) => {
 
     const newCategory = await CategoryModel.create({
       name,
-      price,
       images: Array.isArray(images) ? images : [], // Fallback if not array
       description,
-      isPublish: isPublish || false,
     });
 
     return Helper.success(res, "Category created successfully", newCategory);
@@ -28,12 +26,11 @@ const createCategory = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 // Update Category
 const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, price, images, description, isPublish } = req.body;
+    const { name, images, description, } = req.body;
 
     if (!id) return Helper.fail(res, "Category ID is required");
 
@@ -55,10 +52,8 @@ const updateCategory = async (req, res) => {
       id,
       {
         ...(name && { name }),
-        ...(price !== undefined && { price }),
         ...(description && { description }),
         ...(images && Array.isArray(images) && { images }),
-        ...(typeof isPublish === "boolean" && { isPublish }),
       },
       { new: true }
     );
@@ -109,7 +104,7 @@ const removeCategory = async (req, res) => {
 // List Categories with Search
 const listingCategory = async (req, res) => {
   try {
-    const { search, limit = 10, page = 1, isPublish } = req.body;
+    const { search, limit = 10, page = 1, isPublished } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const query = { isDeleted: false };
 
@@ -120,8 +115,8 @@ const listingCategory = async (req, res) => {
       ];
     }
 
-    if (typeof isPublish === "boolean") {
-      query.isPublish = isPublish;
+    if (typeof isPublished === "boolean") {
+      query.isPublished = isPublished;
     }
 
     const categories = await CategoryModel.find(query).skip(skip).limit(parseInt(limit));
@@ -154,6 +149,34 @@ const findAllCategories = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+const toggleIsPublished = async (req, res) => {
+  try {
+    const { categoryId } = req.body;
+
+    if (!categoryId) {
+      return Helper.fail(res, "Category ID is required");
+    }
+
+    const category = await CategoryModel.findById(categoryId);
+
+    if (!category) {
+      return Helper.fail(res, "category not found");
+    }
+
+    const newStatus = !category.isPublished;
+
+    category.isPublished = newStatus;
+    await category.save();
+
+    return Helper.success(res, `category is now ${newStatus ? 'Published' : 'Unpublished'}`, {
+      categoryId: category._id,
+      isPublished: category.isPublished,
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, "Something went wrong while toggling publish status");
+  }
+};
 
 module.exports = {
   createCategory,
@@ -162,4 +185,5 @@ module.exports = {
   listingCategory,
   findCategoryById,
   findAllCategories,
+  toggleIsPublished
 };

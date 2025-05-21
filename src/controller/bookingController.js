@@ -1,6 +1,7 @@
 const BookingModel = require("../models/bookingModel");
 const PartnerModel = require("../models/partnerModel");
 const UserModel = require("../models/userModel");
+const CartModel = require("../models/cartModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
 const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
@@ -70,7 +71,7 @@ const initiateBooking = async (req, res) => {
     if (!booking) return Helper.fail(res, "Booking not initiated");
 
     // Step 3: Calculate price
-    const cservicePrice = await BookingModel.findOne({
+    const servicePrice = await BookingModel.findOne({
       serviceId,
       _id: booking._id,
     }).populate("serviceId", "price");
@@ -91,6 +92,52 @@ const initiateBooking = async (req, res) => {
     return Helper.fail(res, "Failed to initiate booking");
   }
 };
+const initiateBookingFromCart = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { cartId } = req.body;
+
+    if (!userId) return Helper.fail(res, "User ID is required");
+    if (!cartId) return Helper.fail(res, "Cart ID is required");
+
+    const user = await UserModel.findById(userId).select("address location");
+    if (!user || !user.address?.length) return Helper.fail(res, "Invalid user or address");
+
+    const userLocation = user.location;
+    if (
+      !userLocation || userLocation.type !== "Point" ||
+      !Array.isArray(userLocation.coordinates) || userLocation.coordinates.length !== 2
+    ) return Helper.fail(res, "Invalid user location");
+
+    const cart = await CartModel.findOne({ _id: cartId, userId, isPurchased: false }).populate("items.serviceId");
+    if (!cart || cart.items.length === 0) return Helper.fail(res, "Cart not found or empty");
+
+    let finalPrice = 0;
+    for (const item of cart.items) {
+      const unitPrice = item.serviceId?.price || 0;
+      finalPrice += unitPrice * item.unitQuantity;
+    }
+
+    const booking = await BookingModel.create({
+      userId,
+      cartId,
+      address: user.address[0],
+      location: userLocation,
+      price: finalPrice,
+      totalPrice: finalPrice, // discount logic can be added
+    });
+
+    // cart.isPurchased = true;
+    // await cart.save();
+
+    return Helper.success(res, "Booking created successfully", booking);
+  } catch (err) {
+    console.error(err);
+    return Helper.fail(res, "Failed to create booking");
+  }
+};
+
+
 // get location and address
 const getLocationAndAddress = async (req, res) => {
   try {
@@ -122,6 +169,37 @@ const getLocationAndAddress = async (req, res) => {
   }
 };
 // fetch the time slot between 9:00 AM to 6:00 PM
+// const fetchTimeSlots = async (req, res) => {
+//   try {
+//     const { bookingId } = req.body;
+
+//     if (!bookingId) {
+//       return Helper.fail(res, "Booking ID is required");
+//     }
+//     // Fetch booking and populate the service to get the time
+//     const booking = await BookingModel.findOne({
+//       _id: bookingId,
+//       isDeleted: false,
+//     }).populate("serviceId", "time");
+
+//     if (!booking || !booking.serviceId || !booking.serviceId.time) {
+//       return Helper.fail(res, "Service time not found in booking");
+//     }
+//     const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
+//     const businessStart = process.env.BUSINESS_START_TIME;
+//     const businessEnd = process.env.BUSINESS_END_TIME;
+//     const timeSlots = generateTimeSlots(
+//       businessStart,
+//       businessEnd,
+//       serviceTime
+//     );
+//     return Helper.success(res, "Time slots generated", timeSlots);
+//   } catch (error) {
+//     console.error(error);
+//     return Helper.fail(res, "Failed to generate time slots");
+//   }
+// };
+//new one 
 const fetchTimeSlots = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -129,26 +207,64 @@ const fetchTimeSlots = async (req, res) => {
     if (!bookingId) {
       return Helper.fail(res, "Booking ID is required");
     }
-    // Fetch booking and populate the service to get the time
+
+    // Step 1: Get booking from bookingId
     const booking = await BookingModel.findOne({
       _id: bookingId,
       isDeleted: false,
-    }).populate("serviceId", "time");
+    });
 
-    if (!booking || !booking.serviceId || !booking.serviceId.time) {
-      return Helper.fail(res, "Service time not found in booking");
+    if (!booking || !booking.cartId) {
+      return Helper.fail(res, "Cart ID not found in booking");
     }
-    const serviceTime = booking.serviceId.time; // e.g. 30 (minutes)
-    const businessStart = process.env.BUSINESS_START_TIME;
-    const businessEnd = process.env.BUSINESS_END_TIME;
-    const timeSlots = generateTimeSlots(
-      businessStart,
-      businessEnd,
-      serviceTime
+
+    const cartId = booking.cartId;
+
+    // Step 2: Get cart and populate service time
+    const cart = await CartModel.findOne({
+      _id: cartId,
+      isDeleted: false,
+    }).populate("items.serviceId", "time");
+
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return Helper.fail(res, "No services found in cart");
+    }
+
+    // Step 3: Calculate total service time
+    let totalTime = 0;
+    for (const item of cart.items) {
+      const service = item.serviceId;
+      const timeInMinutes = Number(service.time);
+
+      if (!service || isNaN(timeInMinutes)) {
+        return Helper.fail(res, "Service time missing or invalid for one or more items");
+      }
+
+      totalTime += timeInMinutes;
+    }
+
+    // Step 4: Time slot generation
+    const businessStart = process.env.BUSINESS_START_TIME || "09:00";
+    const businessEnd = process.env.BUSINESS_END_TIME || "18:00";
+
+    const availableMinutes = moment(businessEnd, "HH:mm").diff(
+      moment(businessStart, "HH:mm"),
+      "minutes"
     );
+
+    if (totalTime > availableMinutes) {
+      return Helper.fail(res, "Total service time exceeds available business hours");
+    }
+
+    const timeSlots = generateTimeSlots(businessStart, businessEnd, totalTime);
+
+    if (timeSlots.length === 0) {
+      return Helper.success(res, "No available slots for the given service duration", []);
+    }
+
     return Helper.success(res, "Time slots generated", timeSlots);
   } catch (error) {
-    console.error(error);
+    console.error("❌ Error in fetchTimeSlots:", error);
     return Helper.fail(res, "Failed to generate time slots");
   }
 };
@@ -197,25 +313,43 @@ const findBookingById = async (req, res) => {
   try {
     const bookingId = req.params.id;
     if (!bookingId) {
-      return Helper.fail(res, "booking id is required");
+      return Helper.fail(res, "Booking ID is required");
     }
     const booking = await BookingModel.findOne({
       _id: bookingId,
       isDeleted: false,
     })
-      .select(
-        "-userId -serviceId -categoryId  -isDeleted -createdAt -updatedAt -__v"
-      )
-      .populate("serviceId", "name -_id")
-      .populate("categoryId", "name -_id");
-    if (!booking || booking.length === 0) {
-      return Helper.fail(res, "booking not found");
+      .select("-userId -isDeleted -createdAt -updatedAt -__v")
+      .populate({
+        path: "cartId",
+        select: "-_id name", // optional
+        populate: [
+          {
+            path: "items.serviceId",
+            select: "name", // 👈 service name
+          },
+          {
+            path: "items.categoryId",
+            select: "name", // 👈 category name
+          },
+          {
+            path: "items.subCategoryId",
+            select: "name", // 👈 subcategory name
+          },
+        ],
+      });
+
+    if (!booking) {
+      return Helper.fail(res, "Booking not found");
     }
-    return Helper.success(res, "booking found successfully", booking);
+
+    return Helper.success(res, "Booking found successfully", booking);
   } catch (error) {
+    console.error("❌ findBookingById error:", error);
     return Helper.fail(res, error.message);
   }
 };
+
 // update booking
 const updateBooking = async (req, res) => {
   try {
@@ -277,7 +411,7 @@ const fetchUserBooking = async (req, res) => {
       userId,
       isDeleted: false,
     }).select(
-      "-_id -serviceId -categoryId -paymentMode -isDeleted -createdAt -updatedAt -paymentStatus -__v"
+      "-_id  -cartId -paymentMode -isDeleted -createdAt -updatedAt -paymentStatus -__v"
     );
     if (!userbookings) {
       return Helper.fail(res, "no booking for the user");
@@ -440,72 +574,285 @@ const autoAssignPartner = async (req, res) => {
   }
 };
 // Get sorted list of nearby partners for manual assignment (admin - based on bookingId)
+// const getNearbyPartners = async (req, res) => {
+//   try {
+//     const { bookingId } = req.body;
+
+//     const booking = await BookingModel.findById(bookingId).populate("userId");
+//     if (!booking) return Helper.fail(res, "Booking not found");
+
+//     const user = booking.userId;
+//     const serviceId = booking.serviceId;
+
+//     if (!user || !user.location || !user.location.coordinates) {
+//       return Helper.fail(res, "User location not found");
+//     }
+
+//     if (!serviceId) {
+//       return Helper.fail(res, "Service ID not found in booking");
+//     }
+
+//     const partners = await PartnerModel.find({
+//       isDeleted: false,
+//       isAvailable: true,
+//       services: serviceId, // 🔥 only those who provide this service
+//       location: {
+//         $near: {
+//           $geometry: {
+//             type: "Point",
+//             coordinates: booking.location.coordinates, // or user.location.coordinates
+//           },
+//           $maxDistance: 20000, // 20 km
+//         },
+//       },
+//     });
+
+//     return Helper.success(
+//       res,
+//       "Nearby partners for the service fetched successfully",
+//       partners
+//     );
+//   } catch (err) {
+//     console.error(err);
+//     return Helper.error(res, "Failed to fetch partners");
+//   }
+// };
+//New one
 const getNearbyPartners = async (req, res) => {
   try {
     const { bookingId } = req.body;
 
-    const booking = await BookingModel.findById(bookingId).populate("userId");
+    const booking = await BookingModel.findById(bookingId).populate("cartId");
     if (!booking) return Helper.fail(res, "Booking not found");
 
-    const user = booking.userId;
-    const serviceId = booking.serviceId;
-
-    if (!user || !user.location || !user.location.coordinates) {
-      return Helper.fail(res, "User location not found");
+    if (!booking.cartId || !booking.cartId.items || booking.cartId.items.length === 0) {
+      return Helper.fail(res, "No services found in cart");
     }
 
-    if (!serviceId) {
-      return Helper.fail(res, "Service ID not found in booking");
+    // Cart ke items se serviceId nikal ke array banao
+    const serviceIds = booking.cartId.items.map(item => item.serviceId);
+
+    if (!booking.location || !booking.location.coordinates) {
+      return Helper.fail(res, "Booking location not found");
     }
 
-    const partners = await PartnerModel.find({
+    // Step 2: Find partners providing all services
+    const fullMatchPartners = await PartnerModel.find({
       isDeleted: false,
-      services: serviceId, // 🔥 only those who provide this service
+      isAvailable: true,
+      services: { $all: serviceIds },
       location: {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: booking.location.coordinates, // or user.location.coordinates
+            coordinates: booking.location.coordinates,
           },
-          $maxDistance: 20000, // 20 km
+          $maxDistance: 20000,
         },
       },
     });
 
-    return Helper.success(
-      res,
-      "Nearby partners for the service fetched successfully",
-      partners
-    );
-  } catch (err) {
-    console.error(err);
-    return Helper.error(res, "Failed to fetch partners");
+    // Step 3: Return if full match found
+    if (fullMatchPartners.length > 0) {
+      return Helper.success(res, "Partners providing all services found", fullMatchPartners);
+    }
+
+    // Step 4: Otherwise find partners for each service separately
+    let serviceWisePartners = {};
+    for (let serviceId of serviceIds) {
+      const partnersForService = await PartnerModel.find({
+        isDeleted: false,
+        isAvailable: true,
+        services: serviceId,
+        location: {
+          $near: {
+            $geometry: {
+              type: "Point",
+              coordinates: booking.location.coordinates,
+            },
+            $maxDistance: 20000,
+          },
+        },
+      }).select("name services location");
+
+      serviceWisePartners[serviceId] = partnersForService;
+    }
+
+    // Step 5: Return the service-wise partner list
+    return Helper.success(res, "Partners per service fetched", serviceWisePartners);
+  } catch (error) {
+    console.error(error);
+    return Helper.fail(res, error.message);
   }
 };
+
+
 // Admin manually assigns a partner to booking
+// const assignPartnerManually = async (req, res) => {
+//   try {
+//     const { bookingId, partnerId } = req.body;
+
+//     const booking = await BookingModel.findById(bookingId);
+//     if (!booking) return Helper.fail(res, "Booking not found");
+
+//     const partner = await PartnerModel.findById(partnerId);
+//     if (!partner || partner.isDeleted) {
+//       return Helper.fail(res, "Invalid or deleted partner");
+//     }
+
+//     booking.partnerId = partnerId;
+//     booking.status = "assigned";
+//     await booking.save();
+
+//     return Helper.success(res, "Partner assigned successfully", booking);
+//   } catch (err) {
+//     console.error(err);
+//     return Helper.error(res, "Failed to assign partner");
+//   }
+// };
+//new one
 const assignPartnerManually = async (req, res) => {
   try {
-    const { bookingId, partnerId } = req.body;
+    const { bookingId, assignments } = req.body;
+    // assignments = [{ serviceId: "serviceId1", partnerId: "partnerId1" }, { serviceId: "serviceId2", partnerId: "partnerId2" }, ...]
 
     const booking = await BookingModel.findById(bookingId);
     if (!booking) return Helper.fail(res, "Booking not found");
 
-    const partner = await PartnerModel.findById(partnerId);
-    if (!partner || partner.isDeleted) {
-      return Helper.fail(res, "Invalid or deleted partner");
+    if (!Array.isArray(assignments) || assignments.length === 0) {
+      return Helper.fail(res, "Assignments are required");
     }
 
-    booking.partnerId = partnerId;
-    booking.status = "assigned";
+    // Validate all partners and services
+    for (const { serviceId, partnerId } of assignments) {
+      if (!serviceId || !partnerId) {
+        return Helper.fail(res, "serviceId and partnerId are required for all assignments");
+      }
+
+      const partner = await PartnerModel.findById(partnerId);
+      if (!partner || partner.isDeleted) {
+        return Helper.fail(res, `Invalid or deleted partner: ${partnerId}`);
+      }
+
+      // Optionally: Check if partner provides that service
+      if (!partner.services.includes(serviceId)) {
+        return Helper.fail(res, `Partner ${partnerId} does not provide service ${serviceId}`);
+      }
+    }
+
+    // Assign partners per service
+    booking.partnerAssignments = assignments;
+    booking.bookingStatus = "Progress";
     await booking.save();
 
-    return Helper.success(res, "Partner assigned successfully", booking);
+    return Helper.success(res, "Partners assigned successfully", booking);
   } catch (err) {
     console.error(err);
-    return Helper.error(res, "Failed to assign partner");
+    return Helper.error(res, "Failed to assign partners");
   }
 };
 
+
+// const bookingListing = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
+
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+//     const limitVal = parseInt(limit);
+
+//     // Base match
+//     const matchStage = {
+//       isDeleted: false,
+//     };
+
+//     if (bookingStatus) {
+//       matchStage.bookingStatus = bookingStatus;
+//     }
+
+//     // Aggregation Pipeline
+//     const pipeline = [
+//       { $match: matchStage },
+//       // Populate references
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "user",
+//         },
+//       },
+//       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "categories",
+//           localField: "categoryId",
+//           foreignField: "_id",
+//           as: "category",
+//         },
+//       },
+//       { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "services",
+//           localField: "serviceId",
+//           foreignField: "_id",
+//           as: "service",
+//         },
+//       },
+//       { $unwind: { path: "$service", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "partners",
+//           localField: "partnerId",
+//           foreignField: "_id",
+//           as: "partner",
+//         },
+//       },
+//       { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+//     ];
+
+//     // Add search if provided
+//     if (search) {
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             { "user.name": { $regex: search, $options: "i" } },
+//             { "user.email": { $regex: search, $options: "i" } },
+//             { "category.name": { $regex: search, $options: "i" } },
+//             { "service.name": { $regex: search, $options: "i" } },
+//             { "partner.name": { $regex: search, $options: "i" } },
+//           ],
+//         },
+//       });
+//     }
+
+//     // Count total
+//     const countPipeline = [...pipeline, { $count: "total" }];
+//     const countResult = await BookingModel.aggregate(countPipeline);
+//     const total = countResult.length > 0 ? countResult[0].total : 0;
+
+//     // Add pagination
+//     pipeline.push({ $sort: { createdAt: -1 } });
+//     pipeline.push({ $skip: skip });
+//     pipeline.push({ $limit: limitVal });
+
+//     // Final result
+//     const bookings = await BookingModel.aggregate(pipeline);
+
+//     return Helper.success(res, "Booking list fetched successfully", {
+//       total,
+//       page: parseInt(page),
+//       limit: limitVal,
+//       totalPages: Math.ceil(total / limitVal),
+//       bookings,
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     return Helper.fail(res, error.message);
+//   }
+// };
+
+//new one 
 const bookingListing = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
@@ -513,19 +860,18 @@ const bookingListing = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
-    // Base match
     const matchStage = {
       isDeleted: false,
     };
 
     if (bookingStatus) {
-      matchStage.bookingStatus = bookingStatus;
+      matchStage.status = bookingStatus;
     }
 
-    // Aggregation Pipeline
     const pipeline = [
       { $match: matchStage },
-      // Populate references
+
+      // Lookup user
       {
         $lookup: {
           from: "users",
@@ -535,24 +881,8 @@ const bookingListing = async (req, res) => {
         },
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "categoryId",
-          foreignField: "_id",
-          as: "category",
-        },
-      },
-      { $unwind: { path: "$category", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "services",
-          localField: "serviceId",
-          foreignField: "_id",
-          as: "service",
-        },
-      },
-      { $unwind: { path: "$service", preserveNullAndEmptyArrays: true } },
+
+      // Lookup partner
       {
         $lookup: {
           from: "partners",
@@ -562,34 +892,81 @@ const bookingListing = async (req, res) => {
         },
       },
       { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+
+      // Lookup cart
+      {
+        $lookup: {
+          from: "carts",
+          localField: "cartId",
+          foreignField: "_id",
+          as: "cart",
+        },
+      },
+      { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
+
+      // Unwind cart.items to lookup their category/service/subCategory
+      { $unwind: { path: "$cart.items", preserveNullAndEmptyArrays: true } },
+
+      // Lookup service
+      {
+        $lookup: {
+          from: "services",
+          localField: "cart.items.serviceId",
+          foreignField: "_id",
+          as: "cart.items.service",
+        },
+      },
+      { $unwind: { path: "$cart.items.service", preserveNullAndEmptyArrays: true } },
+
+      // Lookup category
+      {
+        $lookup: {
+          from: "categories",
+          localField: "cart.items.categoryId",
+          foreignField: "_id",
+          as: "cart.items.category",
+        },
+      },
+      { $unwind: { path: "$cart.items.category", preserveNullAndEmptyArrays: true } },
+
+      // Lookup subCategory
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "cart.items.subCategoryId",
+          foreignField: "_id",
+          as: "cart.items.subCategory",
+        },
+      },
+      { $unwind: { path: "$cart.items.subCategory", preserveNullAndEmptyArrays: true } },
     ];
 
-    // Add search if provided
+    // Search on nested fields
     if (search) {
       pipeline.push({
         $match: {
           $or: [
             { "user.name": { $regex: search, $options: "i" } },
             { "user.email": { $regex: search, $options: "i" } },
-            { "category.name": { $regex: search, $options: "i" } },
-            { "service.name": { $regex: search, $options: "i" } },
+            { "cart.items.category.name": { $regex: search, $options: "i" } },
+            { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+            { "cart.items.service.name": { $regex: search, $options: "i" } },
             { "partner.name": { $regex: search, $options: "i" } },
           ],
         },
       });
     }
 
-    // Count total
+    // Count
     const countPipeline = [...pipeline, { $count: "total" }];
     const countResult = await BookingModel.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
 
-    // Add pagination
+    // Paginate
     pipeline.push({ $sort: { createdAt: -1 } });
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: limitVal });
 
-    // Final result
     const bookings = await BookingModel.aggregate(pipeline);
 
     return Helper.success(res, "Booking list fetched successfully", {
@@ -600,13 +977,15 @@ const bookingListing = async (req, res) => {
       bookings,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return Helper.fail(res, error.message);
   }
 };
 
+
 module.exports = {
   initiateBooking,
+  initiateBookingFromCart,
   getLocationAndAddress,
   fetchTimeSlots,
   selectDateAndTimeslot,

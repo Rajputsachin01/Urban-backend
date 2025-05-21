@@ -5,14 +5,6 @@ const SubCategorySchema = new mongoose.Schema({
         required: true,
         default: "",
     },
-    price: {
-        type: Number,
-        default: 0,
-    },
-    time: {
-        type: String,
-        default: "",
-    },
     images: {
         type:[ String ],
         default: "",
@@ -26,7 +18,7 @@ const SubCategorySchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: "categories",
         },
-    isPublish: {
+    isPublished: {
         type: Boolean,
         default: false
     },

@@ -5,7 +5,7 @@ const Helper = require("../utils/helper");
 // create subcategory
 const createSubCategory = async (req, res) => {
   try {
-    const { name, description, categoryId, price, time, images } = req.body;
+    const { name, description, categoryId, images } = req.body;
 
     if (!name) return Helper.fail(res, "SubCategory name is required");
     if (!description) return Helper.fail(res, "SubCategory description is required");
@@ -20,8 +20,6 @@ const createSubCategory = async (req, res) => {
       name,
       description,
       categoryId,
-      price,
-      time,
       images
     });
 
@@ -36,7 +34,7 @@ const createSubCategory = async (req, res) => {
 const updateSubCategory = async (req, res) => {
   try {
     const subCategoryId = req.params.id;
-    const { name, description, price, time, images } = req.body;
+    const { name, description, images } = req.body;
 
     if (!subCategoryId) return Helper.fail(res, "SubCategory ID is required");
 
@@ -52,8 +50,6 @@ const updateSubCategory = async (req, res) => {
       updateObj.name = name;
     }
     if (description) updateObj.description = description;
-    if (price) updateObj.price = price;
-    if (time) updateObj.time = time;
     if (images) updateObj.images = images;
 
     const updatedSubCategory = await SubCategoryModel.findByIdAndUpdate(subCategoryId, updateObj, { new: true });
@@ -83,11 +79,11 @@ const findSubCategoryById = async (req, res) => {
 // soft delete
 const removeSubCategory = async (req, res) => {
   try {
-    const { categoryId } = req.body;
-    if (!categoryId) return Helper.fail(res, "SubCategory ID required");
+    const { subCategoryId } = req.body;
+    if (!subCategoryId) return Helper.fail(res, "SubCategory ID required");
 
     const removed = await SubCategoryModel.findOneAndUpdate(
-      { _id: categoryId },
+      { _id: subCategoryId },
       { isDeleted: true },
       { new: true }
     );
@@ -155,11 +151,41 @@ const subCategoryByCategoryId = async (req, res) => {
   }
 };
 
+const toggleIsPublished = async (req, res) => {
+  try {
+    const { subCategoryId } = req.body;
+
+    if (!subCategoryId) {
+      return Helper.fail(res, "SubCategory ID is required");
+    }
+
+    const subCategory = await SubCategoryModel.findById(subCategoryId);
+
+    if (!subCategory) {
+      return Helper.fail(res, "subCategory not found");
+    }
+
+    const newStatus = !subCategory.isPublished;
+
+    subCategory.isPublished = newStatus;
+    await subCategory.save();
+
+    return Helper.success(res, `subCategory is now ${newStatus ? 'Published' : 'Unpublished'}`, {
+      subCategoryId: subCategory._id,
+      isPublished: subCategory.isPublished,
+    });
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, "Something went wrong while toggling publish status");
+  }
+};
+
 module.exports = {
   createSubCategory,
   updateSubCategory,
   removeSubCategory,
   listingSubCategory,
   findSubCategoryById,
-  subCategoryByCategoryId
+  subCategoryByCategoryId,
+  toggleIsPublished
 };

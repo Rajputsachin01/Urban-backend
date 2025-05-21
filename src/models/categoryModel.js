@@ -6,10 +6,6 @@ const CategorySchema = new mongoose.Schema({
         required: true,
         default: "",
     },
-    price: {
-        type: Number,
-        default: 0,
-    },
     images: {
         type:[ String ],
         default: "",
@@ -19,7 +15,7 @@ const CategorySchema = new mongoose.Schema({
         required: true,
         default: "",
     },
-    isPublish: {
+    isPublished: {
         type: Boolean,
         default: false
     },

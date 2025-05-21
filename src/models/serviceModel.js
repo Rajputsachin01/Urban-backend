@@ -10,11 +10,11 @@ const ServiceSchema = new mongoose.Schema({
         default: "",
         required: true
     },
-     time: {
-        type: String,
-        required: true,
-        default: "",
-    },
+   time: {
+  type: Number, // instead of String
+  required: true
+},
+
     description: {
         type: String,
         default: ""

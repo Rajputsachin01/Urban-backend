@@ -43,6 +43,8 @@ const notificationRoutes = require("./src/routes/notificationRoutes")
 const jobStatusRoutes = require("./src/routes/JobStatusRoute")
 const reviewRoutes = require("./src/routes/reviewRoutes")
 const cliclAndViewsRoutes = require("./src/routes/clicksAndViewsRoutes")
+const paymentRoutes = require("./src/routes/paymentRoutes")
+const cartRoutes = require("./src/routes/cartRoutes")
 
 
 app.use("/v1/admin",adminRoutes);
@@ -60,7 +62,8 @@ app.use("/v1/notification",notificationRoutes);
 app.use("/v1/jobStatus",jobStatusRoutes);
 app.use("/v1/review",reviewRoutes);
 app.use("/v1/activity",cliclAndViewsRoutes);
-
+app.use("/v1/payment",paymentRoutes);
+app.use("/v1/cart",cartRoutes);
 
 
 //server creating

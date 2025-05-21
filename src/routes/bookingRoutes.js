@@ -3,6 +3,7 @@ const router = express.Router();
 const { isAuth } = require("../utils/auth");
 const {
   initiateBooking,
+  initiateBookingFromCart,
   removeBooking,
   updateBooking,
   fetchUserBooking,
@@ -20,7 +21,7 @@ const {
 } = require("../controller/bookingController");
 
 /*--------------------------------user Routes-------------------------------*/
-router.post("/initiateBooking", isAuth, initiateBooking);
+router.post("/initiateBooking", isAuth, initiateBookingFromCart);
 router.post("/location", isAuth, getLocationAndAddress);
 router.post("/fetchTimeSlots", isAuth, fetchTimeSlots);
 router.post("/selectDateAndTimeslot", isAuth, selectDateAndTimeslot);

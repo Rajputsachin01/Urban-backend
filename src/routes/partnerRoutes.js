@@ -22,7 +22,4 @@ router.post("/listingBookingRequests", isAuth, partnerController.listPartnerBook
 router.post("/toggleIsPublished", isAuth, partnerController.toggleIsPublished);
 router.post("/findAll",partnerController.findAllPartners);
 
-
-
-
 module.exports = router;

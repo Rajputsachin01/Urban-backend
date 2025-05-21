@@ -599,7 +599,12 @@ const listPartnerBookingRequests = async (req, res) => {
 
     const [requests, total] = await Promise.all([
       PartnerRequestModel.find(query)
-        .populate("bookingId")
+        .populate({
+          path: "bookingId",
+          populate: {
+            path: "serviceId",
+          },
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -618,7 +623,7 @@ const listPartnerBookingRequests = async (req, res) => {
     return Helper.fail(res, "Unable to fetch partner booking requests");
   }
 };
-// Partner Ispublished toggle 
+// Partner isPublished toggle 
 const toggleIsPublished = async (req, res) => {
   try {
     const { partnerId } = req.body;
