@@ -142,7 +142,7 @@ const listingCategory = async (req, res) => {
 // Fetch All Categories
 const findAllCategories = async (req, res) => {
   try {
-    const categories = await CategoryModel.find({ isDeleted: false });
+    const categories = await CategoryModel.find({ isDeleted: false }).select("name");
     return Helper.success(res, "All categories fetched", categories);
   } catch (error) {
     console.log(error);

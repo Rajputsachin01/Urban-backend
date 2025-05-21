@@ -180,6 +180,16 @@ const toggleIsPublished = async (req, res) => {
   }
 };
 
+const findAllSubCategories = async (req, res) => {
+  try {
+    const subCategories = await SubCategoryModel.find({ isDeleted: false }).select("name");
+    return Helper.success(res, "All subCategories fetched", subCategories);
+  } catch (error) {
+    console.log(error);
+    return Helper.fail(res, error.message);
+  }
+};
+
 module.exports = {
   createSubCategory,
   updateSubCategory,
@@ -187,5 +197,6 @@ module.exports = {
   listingSubCategory,
   findSubCategoryById,
   subCategoryByCategoryId,
-  toggleIsPublished
+  toggleIsPublished,
+  findAllSubCategories
 };
