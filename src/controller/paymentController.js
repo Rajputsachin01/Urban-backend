@@ -16,7 +16,7 @@ const initiatePayment = async (req, res) => {
 
     const amount = parseFloat(booking.totalPrice);
     const email = booking.userId?.email;
-    const phone = booking.userId?.phoneNo || "9999999999";
+    const phone = booking.userId?.phoneNo||1234567892;
 
     if (!email) return Helper.fail(res, "User email not found");
 
@@ -95,18 +95,19 @@ const handleCashfreeWebhook = async (req, res) => {
     const isValid = verifyCashfreeSignature(parsed, signature, process.env.CASHFREE_CLIENT_SECRET);
     if (!isValid) {
       console.warn("Invalid Cashfree webhook signature");
-      return res.status(400).json({ message: "Invalid webhook signature" });
+      return Helper.fail(res, "Invalid webhook signature");
     }
 
     const { order_id, order_status, payment_mode, payment_group, payment_id } = parsed;
     if (!order_id || !payment_id) {
-      return res.status(400).json({ message: "Invalid payload" });
+            return Helper.fail(res, "Invalid payload");
+
     }
 
     const bookingId = order_id.split("_")[1];
     const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false });
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
+            return Helper.fail(res, "Booking not found");
     }
 
     if (order_status === "PAID") {
@@ -120,10 +121,10 @@ const handleCashfreeWebhook = async (req, res) => {
 
     await booking.save();
     console.log("✅ Webhook processed successfully");
-    return res.status(200).json({ message: "Webhook processed" });
+    return Helper.success(res,"Webhook processed" );
   } catch (error) {
     console.error("❌ Webhook Error:", error.message);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return Helper.error(res, "Internal Server Error" );
   }
 };
 
