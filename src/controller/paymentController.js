@@ -1,7 +1,7 @@
 const axios = require("axios");
 const crypto = require("crypto");
 const BookingModel = require("../models/bookingModel");
-const Helper = require("../utils/helper");
+const Helper = require("../utils/helper")
 
 const initiatePayment = async (req, res) => {
   try {
