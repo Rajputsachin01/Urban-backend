@@ -16,7 +16,7 @@ const initiatePayment = async (req, res) => {
 
     const amount = parseFloat(booking.totalPrice);
     const email = booking.userId?.email;
-    const phone = booking.userId?.phoneNo||1234567892;
+const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
 
     if (!email) return Helper.fail(res, "User email not found");
 
@@ -34,7 +34,7 @@ const initiatePayment = async (req, res) => {
       customer_details: {
         customer_id: booking.userId._id.toString(),
         customer_email: email,
-        customer_phone: phone,
+        customer_phone: phoneNo,
       },
       order_meta: {
         return_url: `${process.env.FRONTEND_URL}?order_id=${orderId}`,
