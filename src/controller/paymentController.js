@@ -1,89 +1,133 @@
-const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const axios = require("axios");
+const crypto = require("crypto");
 const BookingModel = require("../models/bookingModel");
-const Helper = require("../utils/helper"); // Optional: if using standardized responses
+const Helper = require("../utils/Helper");
 
-// Create Stripe Checkout Session
-const createCheckoutSession = async (req, res) => {
+const initiatePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
     if (!bookingId) return Helper.fail(res, "Booking ID is required");
 
     const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
-      .populate("userId", "email")
+      .populate("userId", "email phoneNo")
       .select("totalPrice userId");
 
     if (!booking) return Helper.fail(res, "Booking not found");
 
-    const amount = Math.round(booking.totalPrice * 100); // to paise
+    const amount = parseFloat(booking.totalPrice);
     const email = booking.userId?.email;
+    const phone = booking.userId?.phoneNo || "9999999999";
 
     if (!email) return Helper.fail(res, "User email not found");
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      customer_email: email,
-      line_items: [
-        {
-          price_data: {
-            currency: "inr",
-            product_data: {
-              name: `Booking #${bookingId}`,
-            },
-            unit_amount: amount,
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${process.env.FRONTEND_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
-      metadata: {
-        bookingId: bookingId.toString(),
-      },
-    });
+    const orderId = `ORDER_${bookingId}_${Date.now()}`;
 
-    return Helper.success(res, "Checkout session created", { url: session.url });
+    const isSandbox = process.env.CASHFREE_ENV === "SANDBOX";
+    const baseUrl = isSandbox
+      ? "https://sandbox.cashfree.com/pg/orders"
+      : "https://api.cashfree.com/pg/orders";
+
+    const payload = {
+      order_id: orderId,
+      order_amount: amount,
+      order_currency: "INR",
+      customer_details: {
+        customer_id: booking.userId._id.toString(),
+        customer_email: email,
+        customer_phone: phone,
+      },
+      order_meta: {
+        return_url: `${process.env.FRONTEND_URL}?order_id=${orderId}`,
+        notify_url: `${process.env.BACKEND_URL}/v1/payment/webhook`,
+      },
+    };
+
+    const headers = {
+      "Content-Type": "application/json",
+      "x-client-id": process.env.CASHFREE_CLIENT_ID,
+      "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
+      "x-api-version": "2022-01-01",
+    };
+
+    const response = await axios.post(baseUrl, payload, { headers });
+    const orderData = response.data;
+
+    if (!orderData || !orderData.order_token || orderData.order_status !== "ACTIVE") {
+      return Helper.fail(res, "Cashfree order creation failed");
+    }
+
+    // Save order ID
+    booking.cashfreeOrderId = orderId;
+    await booking.save();
+
+    return Helper.success(res, "Cashfree order created", {
+      order_id: orderData.order_id,
+      order_token: orderData.order_token,
+      payment_link: orderData.payment_link,
+      bookingId,
+    });
   } catch (err) {
-    console.error("Stripe Session Error:", err);
-    return Helper.fail(res, "Failed to create checkout session");
+    console.error("Cashfree Order Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+    return Helper.fail(res, "Failed to create Cashfree order");
   }
 };
 
-// Stripe Webhook Handler (rawBody required)
-const stripeWebhookHandler = async (req, res) => {
-  const sig = req.headers["stripe-signature"];
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+// Signature verify helper
+const verifyCashfreeSignature = (body, signature, secret) => {
+  const generated = crypto
+    .createHmac("sha256", secret)
+    .update(JSON.stringify(body))
+    .digest("base64");
+  return generated === signature;
+};
 
-  let event;
+const handleCashfreeWebhook = async (req, res) => {
   try {
-    event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret); // ✅ USE rawBody not body
-  } catch (err) {
-    console.error("Webhook Signature Error:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
+    const rawBody = req.body;
+    const signature = req.headers["x-cf-signature"];
 
-  // Handle successful payment
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
-    const bookingId = session.metadata?.bookingId;
+    const parsed = JSON.parse(rawBody.toString());
 
-    if (bookingId) {
-      await BookingModel.findByIdAndUpdate(bookingId, {
-        paymentStatus: "Paid",
-        stripePaymentId: session.payment_intent,
-        paymentDetails: {
-          sessionId: session.id,
-          amountPaid: session.amount_total / 100,
-          method: "Stripe",
-        },
-      });
+    const isValid = verifyCashfreeSignature(parsed, signature, process.env.CASHFREE_CLIENT_SECRET);
+    if (!isValid) {
+      console.warn("Invalid Cashfree webhook signature");
+      return res.status(400).json({ message: "Invalid webhook signature" });
     }
-  }
 
-  return res.status(200).json({ received: true });
+    const { order_id, order_status, payment_mode, payment_group, payment_id } = parsed;
+    if (!order_id || !payment_id) {
+      return res.status(400).json({ message: "Invalid payload" });
+    }
+
+    const bookingId = order_id.split("_")[1];
+    const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (order_status === "PAID") {
+      booking.paymentStatus = "paid";
+      booking.paymentMode = payment_mode || payment_group;
+      booking.cashfreePaymentId = payment_id;
+      booking.cashfreeOrderId = order_id;
+    } else {
+      booking.paymentStatus = "failed";
+    }
+
+    await booking.save();
+    console.log("✅ Webhook processed successfully");
+    return res.status(200).json({ message: "Webhook processed" });
+  } catch (error) {
+    console.error("❌ Webhook Error:", error.message);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
 
 module.exports = {
-  createCheckoutSession,
-  stripeWebhookHandler,
+  initiatePayment,
+  handleCashfreeWebhook,
 };

@@ -7,6 +7,8 @@ const cookieParser = require('cookie-parser');
 // const cron = require("node-cron");
 // const expireAndReassign = require("./src/utils/expireAndReaasign");
 //cors middleware 
+// Use raw body parser for webhook route only
+app.use('/v1/payment/webhook', bodyParser.raw({ type: '*/*' }));
 app.use(cors(
     {
       origin: "*",  // Allows all origins

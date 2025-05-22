@@ -155,7 +155,8 @@ const BookingSchema = new mongoose.Schema(
       enum: ["pending", "paid", "failed"],
       default: "pending",
     },
-    stripePaymentId: String,
+    cashfreePaymentId: String,
+    cashfreeOrderId: String,
 
     isDeleted: {
       type: Boolean,
