@@ -5,7 +5,6 @@ const UserSchema = new mongoose.Schema(
   {
      userName: {
         type: String,
-        required: true,
     },
     img:{
       type: String,

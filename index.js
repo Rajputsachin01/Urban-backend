@@ -8,7 +8,9 @@ const cookieParser = require('cookie-parser');
 // const expireAndReassign = require("./src/utils/expireAndReaasign");
 //cors middleware 
 // Use raw body parser for webhook route only
-app.use('/v1/payment/webhook', bodyParser.raw({ type: '*/*' }));
+const paymentRoutes = require("./src/routes/paymentRoutes")
+
+// app.post('/v1/payment/webhook', bodyParser.raw({ type: '*/*' }), paymentRoutes.handleCashfreeWebhook);
 app.use(cors(
     {
       origin: "*",  // Allows all origins
@@ -45,7 +47,6 @@ const notificationRoutes = require("./src/routes/notificationRoutes")
 const jobStatusRoutes = require("./src/routes/JobStatusRoute")
 const reviewRoutes = require("./src/routes/reviewRoutes")
 const cliclAndViewsRoutes = require("./src/routes/clicksAndViewsRoutes")
-const paymentRoutes = require("./src/routes/paymentRoutes")
 const cartRoutes = require("./src/routes/cartRoutes")
 
 

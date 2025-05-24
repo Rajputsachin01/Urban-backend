@@ -41,11 +41,10 @@ const addToCart = async (req, res) => {
 
 const listUserCartItems = async (req, res) => {
   try {
-    const userId  = req.userId;
+    const userId = req.userId;
     if (!userId) return Helper.fail(res, "User ID is required");
 
     const { page = 1, limit = 10, search = "" } = req.body;
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const matchQuery = {
@@ -57,9 +56,7 @@ const listUserCartItems = async (req, res) => {
     const cart = await CartModel.findOne(matchQuery)
       .populate({
         path: "items.serviceId",
-        match: search
-          ? { name: { $regex: search, $options: "i" } }
-          : {},
+        match: search ? { name: { $regex: search, $options: "i" } } : {},
       })
       .populate("items.categoryId", "name")
       .populate("items.subCategoryId", "name");
@@ -68,11 +65,14 @@ const listUserCartItems = async (req, res) => {
       return Helper.fail(res, "Cart is empty");
     }
 
+    // Filter out null serviceId items (in case search didn't match)
     const filteredItems = cart.items.filter(item => item.serviceId !== null);
 
+    // Apply pagination
     const paginatedItems = filteredItems.slice(skip, skip + parseInt(limit));
 
     return Helper.success(res, "Cart items fetched successfully", {
+      cartId: cart._id, // Include cart _id here
       totalItems: filteredItems.length,
       currentPage: parseInt(page),
       totalPages: Math.ceil(filteredItems.length / parseInt(limit)),
@@ -83,6 +83,7 @@ const listUserCartItems = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 
 const updateCartItemQuantity = async (req, res) => {
   try {
