@@ -89,6 +89,8 @@ const verifyCashfreeSignature = (rawBody, signature, secret) => {
 const handleCashfreeWebhook = async (req, res) => {
   try {
     const rawBody = req.body; // Buffer because of express.raw()
+    console.log("🧾 Raw Body Stringified:\n", rawBody.toString("utf-8"));
+
     const signature = req.headers["x-webhook-signature"];
 
     if (!signature) return Helper.fail(res, "❌ Missing webhook signature");
