@@ -88,6 +88,7 @@ const createPartner = async (req, res) => {
 
     if (createdBy === "admin") {
       const data = {
+        userName,
         name,
         phoneNo,
         email,
@@ -125,6 +126,7 @@ const createPartner = async (req, res) => {
       // const otp = generateOTP();
       const otp = "1234";
       const data = {
+                userName,
         name,
         phoneNo,
         email,
@@ -338,6 +340,9 @@ const partnerListing = async (req, res) => {
     const limitVal = parseInt(limit);
 
     const matchStage = { isDeleted: false };
+    if (req.type === "user") {
+      matchStage.isPublished = true;
+    }
     if (search) {
       matchStage.$or = [
         { name: { $regex: search, $options: "i" } },

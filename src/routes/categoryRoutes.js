@@ -9,7 +9,7 @@ router.post("/update/:id",isAuth, updateCategory)
 router.post("/toggleIsPublished",isAuth, toggleIsPublished)
 router.post("/findById/:id", isAuth,findCategoryById)
 router.post("/remove",isAuth, removeCategory)
-router.post("/listing", listingCategory)
+router.post("/listing",isAuth, listingCategory)
 router.post("/findAll", findAllCategories)
 
 module.exports = router;

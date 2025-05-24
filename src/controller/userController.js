@@ -31,61 +31,144 @@ const userProfile = async (userId) => {
 const generateOTP = () =>
     Math.floor(1000 + Math.random() * 9000).toString();
 //For creating user
+// const registerUser = async (req, res) => {
+//   try {
+//     const { img, name, email, password, phoneNo, address, location, referralCode } =
+//       req.body;
+
+//     // validation for required field
+//     if (!img) {
+//       return Helper.fail(res, "image is required");
+//     }
+//     if (!name) {
+//       return Helper.fail(res, "name is required");
+//     }
+//     if (!email) {
+//       return Helper.fail(res, "email is required");
+//     }
+//     if (!password) {
+//       return Helper.fail(res, "password is required");
+//     }
+//     if (!phoneNo) {
+//       return Helper.fail(res, "phoneNo is required");
+//     }
+//     if (!address) {
+//       return Helper.fail(res, "address is required");
+//     }
+//     if (!location) {
+//       return Helper.fail(res, "location is required");
+//     }
+//     // Validating email format
+//     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+//     if (!emailRegex.test(email)) {
+//       return Helper.fail(res, "Email is not valid!");
+//     }
+//     // Validating phone no.
+//     if (phoneNo) {
+//       const phoneRegex = /^\d{6,14}$/; // Allows only digits(0-9) and ensures length is between 6 and 14
+//       if (!phoneRegex.test(phoneNo)) {
+//         return Helper.fail(res, " number is not valid!");
+//       }
+//     }
+//     let checkObj = { $or: [{ email: email }] };
+//     if (phoneNo) {
+//       checkObj.$or.push({ phoneNo: phoneNo });
+//     }
+//     // let userCheck = await UserModel.find(checkObj, {isDeleted: false});
+//     let userCheck = await UserModel.find(checkObj);
+//     if (userCheck.length > 0) {
+//       return Helper.fail(
+//         res,
+//         "User already exists with this email or mobile No.!"
+//       );
+//     }
+//     // Generate unique referral code
+//     const generateReferralCode = async () => {
+//       let isUnique = false,
+//         uniqueCode;
+//       while (!isUnique) {
+//         const letters = String.fromCharCode(
+//           65 + Math.floor(Math.random() * 26),
+//           65 + Math.floor(Math.random() * 26)
+//         );
+//         const digits = Math.floor(1000 + Math.random() * 9000);
+//         uniqueCode = `${letters}${digits}`;
+//         const existingCode = await UserModel.findOne({
+//           referralCode: uniqueCode,
+//         });
+//         if (!existingCode) isUnique = true;
+//       }
+//       return uniqueCode;
+//     };
+//     const newReferralCode = await generateReferralCode();
+//     let referredBy = null;
+//     if (referralCode) {
+//       const referrer = await UserModel.findOne({ referralCode });
+//       if (!referrer) {
+//         return Helper.fail(res, "Invalid Referral Code!");
+//       }
+//       referredBy = referrer._id;
+//     }
+//     //for hashing password
+//     const hashedPassword = await bcrypt.hash(password, saltRounds);
+//     // Generate OTP
+//     // const otp = generateOTP();
+//     const otp = "1234"
+//     const userObj = {
+//               userName,
+//       img,
+//       name,
+//       email,
+//       phoneNo,
+//       address,
+//       location,
+//       password: hashedPassword ,
+//       otp: otp,
+//       referralCode: newReferralCode,
+//       referredBy,
+//     };
+
+//     const createUser = await UserModel.create(userObj);
+//     return Helper.success(res, "OTP successfully", createUser);
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
+//new one
 const registerUser = async (req, res) => {
   try {
     const { img, name, email, password, phoneNo, address, location, referralCode } =
       req.body;
 
-    // validation for required field
-    if (!img) {
-      return Helper.fail(res, "image is required");
-    }
-    if (!name) {
-      return Helper.fail(res, "name is required");
-    }
-    if (!email) {
-      return Helper.fail(res, "email is required");
-    }
-    if (!password) {
-      return Helper.fail(res, "password is required");
-    }
-    if (!phoneNo) {
-      return Helper.fail(res, "phoneNo is required");
-    }
-    if (!address) {
-      return Helper.fail(res, "address is required");
-    }
-    if (!location) {
-      return Helper.fail(res, "location is required");
-    }
-    // Validating email format
+    // 1. Field Validations
+    if (!img) return Helper.fail(res, "image is required");
+    if (!name) return Helper.fail(res, "name is required");
+    if (!email) return Helper.fail(res, "email is required");
+    if (!password) return Helper.fail(res, "password is required");
+    if (!phoneNo) return Helper.fail(res, "phoneNo is required");
+    if (!address) return Helper.fail(res, "address is required");
+    if (!location) return Helper.fail(res, "location is required");
+
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-    if (!emailRegex.test(email)) {
-      return Helper.fail(res, "Email is not valid!");
+    if (!emailRegex.test(email)) return Helper.fail(res, "Email is not valid!");
+
+    const phoneRegex = /^\d{6,14}$/;
+    if (!phoneRegex.test(phoneNo)) return Helper.fail(res, "Phone number is not valid!");
+
+    // 2. Check if user exists with same email or phoneNo
+    const existingUser = await UserModel.findOne({
+      $or: [{ email }, { phoneNo }],
+      isDeleted: false, // only if you use soft deletes
+    });
+
+    if (existingUser) {
+      return Helper.fail(res, "User already exists with this email or phone number!");
     }
-    // Validating phone no.
-    if (phoneNo) {
-      const phoneRegex = /^\d{6,14}$/; // Allows only digits(0-9) and ensures length is between 6 and 14
-      if (!phoneRegex.test(phoneNo)) {
-        return Helper.fail(res, " number is not valid!");
-      }
-    }
-    let checkObj = { $or: [{ email: email }] };
-    if (phoneNo) {
-      checkObj.$or.push({ phoneNo: phoneNo });
-    }
-    // let userCheck = await UserModel.find(checkObj, {isDeleted: false});
-    let userCheck = await UserModel.find(checkObj);
-    if (userCheck.length > 0) {
-      return Helper.fail(
-        res,
-        "User already exists with this email or mobile No.!"
-      );
-    }
-    // Generate unique referral code
+
+    // 3. Generate referral code
     const generateReferralCode = async () => {
-      let isUnique = false,
-        uniqueCode;
+      let isUnique = false, uniqueCode;
       while (!isUnique) {
         const letters = String.fromCharCode(
           65 + Math.floor(Math.random() * 26),
@@ -93,47 +176,63 @@ const registerUser = async (req, res) => {
         );
         const digits = Math.floor(1000 + Math.random() * 9000);
         uniqueCode = `${letters}${digits}`;
-        const existingCode = await UserModel.findOne({
-          referralCode: uniqueCode,
-        });
-        if (!existingCode) isUnique = true;
+        const existing = await UserModel.findOne({ referralCode: uniqueCode });
+        if (!existing) isUnique = true;
       }
       return uniqueCode;
     };
+
     const newReferralCode = await generateReferralCode();
+
+    // 4. Validate referral code (optional)
     let referredBy = null;
     if (referralCode) {
       const referrer = await UserModel.findOne({ referralCode });
-      if (!referrer) {
-        return Helper.fail(res, "Invalid Referral Code!");
-      }
+      if (!referrer) return Helper.fail(res, "Invalid Referral Code!");
       referredBy = referrer._id;
     }
-    //for hashing password
+
+    // 5. Hash password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    // Generate OTP
-    // const otp = generateOTP();
-    const otp = "1234"
+
+    // 6. Generate userName
+    let baseName = name.toLowerCase().replace(/\s+/g, '');
+    let lastThree = phoneNo.slice(-3);
+    let userName = `${baseName}${lastThree}`;
+
+    // Ensure username is unique
+    let usernameExists = await UserModel.findOne({ userName });
+    while (usernameExists) {
+      const rand = Math.floor(100 + Math.random() * 900); // random 3 digits
+      userName = `${baseName}${rand}`;
+      usernameExists = await UserModel.findOne({ userName });
+    }
+
+    // 7. Create User
+    const otp = "1234"; // For dev only, replace with actual generation
     const userObj = {
+      userName,
       img,
       name,
       email,
       phoneNo,
       address,
       location,
-      password: hashedPassword ,
-      otp: otp,
+      password: hashedPassword,
+      otp,
       referralCode: newReferralCode,
       referredBy,
     };
 
-    const createUser = await UserModel.create(userObj);
-    return Helper.success(res, "OTP successfully", createUser);
+    const createdUser = await UserModel.create(userObj);
+
+    return Helper.success(res, "OTP successfully sent", createdUser);
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error(error);
+    return res.status(500).json({ error: "Internal server error" });
   }
 };
+
 //for updating User
 const updateUser = async (req, res) => {
   try {

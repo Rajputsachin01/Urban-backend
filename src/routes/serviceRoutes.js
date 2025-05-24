@@ -8,6 +8,6 @@ router.post("/create",isAuth, serviceController.createService)
 router.post("/update/:id", isAuth,serviceController.updateService)
 router.post("/remove/:id",isAuth, serviceController.removeService)
 router.post("/listing", serviceController.listingService)
-router.post("/serviceBySubCategory", serviceController.serviceBySubCategoryId)
+router.post("/serviceBySubCategory/:subCategoryId", serviceController.serviceBySubCategoryId)
 
 module.exports = router;

@@ -107,7 +107,9 @@ const listingCategory = async (req, res) => {
     const { search, limit = 10, page = 1, isPublished } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const query = { isDeleted: false };
-
+if (req.type === "user") {
+      query.isPublished = true;
+    }
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: "i" } },

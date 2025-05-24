@@ -9,7 +9,7 @@ router.post("/update/:id",isAuth, updateSubCategory)
 router.post("/toggleIsPublished/",isAuth, toggleIsPublished)
 router.post("/findById/:id",isAuth, findSubCategoryById)
 router.post("/remove",isAuth, removeSubCategory)
-router.post("/listing", listingSubCategory)
+router.post("/listing",isAuth, listingSubCategory)
 router.post("/findAll", findAllSubCategories)
 router.post("/subCategoriesByCategory/:categoryId", subCategoryByCategoryId)
 

@@ -103,6 +103,9 @@ const listingSubCategory = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     let matchStage = { isDeleted: false };
+     if (req.type === "user") {
+      matchStage.isPublished = true;
+    }
     if (search) {
       matchStage.$or = [
         { name: { $regex: search, $options: "i" } },
