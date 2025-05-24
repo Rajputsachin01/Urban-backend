@@ -741,7 +741,7 @@ const assignPartnerManually = async (req, res) => {
     }
 
     // Assign partners per service
-    booking.partnerAssignments = assignments;
+    booking.assignedPartners = assignments;
     booking.bookingStatus = "Progress";
     await booking.save();
 
@@ -1011,7 +1011,7 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
-      // Lookup partner
+      // Lookup partner (main assigned partner if available)
       {
         $lookup: {
           from: "partners",
@@ -1033,10 +1033,10 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
 
-      // Unwind cart.items to lookup their category/service/subCategory
+      // Unwind cart items
       { $unwind: { path: "$cart.items", preserveNullAndEmptyArrays: true } },
 
-      // Lookup service
+      // Lookup service for each item
       {
         $lookup: {
           from: "services",
@@ -1047,7 +1047,7 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$cart.items.service", preserveNullAndEmptyArrays: true } },
 
-      // Lookup category
+      // Lookup category for each item
       {
         $lookup: {
           from: "categories",
@@ -1058,7 +1058,7 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$cart.items.category", preserveNullAndEmptyArrays: true } },
 
-      // Lookup subCategory
+      // Lookup subCategory for each item
       {
         $lookup: {
           from: "subcategories",
@@ -1068,9 +1068,49 @@ const bookingListing = async (req, res) => {
         },
       },
       { $unwind: { path: "$cart.items.subCategory", preserveNullAndEmptyArrays: true } },
+
+      // Lookup assignedPartners (partner + service)
+      { $unwind: { path: "$assignedPartners", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "partners",
+          localField: "assignedPartners.partnerId",
+          foreignField: "_id",
+          as: "assignedPartners.partner",
+        },
+      },
+      { $unwind: { path: "$assignedPartners.partner", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "services",
+          localField: "assignedPartners.serviceId",
+          foreignField: "_id",
+          as: "assignedPartners.service",
+        },
+      },
+      { $unwind: { path: "$assignedPartners.service", preserveNullAndEmptyArrays: true } },
+
+      // Final grouping to merge everything back
+      {
+        $group: {
+          _id: "$_id",
+          bookingData: { $first: "$$ROOT" },
+          cartItems: { $push: "$cart.items" },
+          assignedPartners: { $push: "$assignedPartners" }
+        }
+      },
+      {
+        $addFields: {
+          "bookingData.cart.items": "$cartItems",
+          "bookingData.assignedPartners": "$assignedPartners"
+        }
+      },
+      {
+        $replaceRoot: { newRoot: "$bookingData" }
+      }
     ];
 
-    // Search on nested fields
+    // Apply search if any
     if (search) {
       pipeline.push({
         $match: {
@@ -1081,33 +1121,14 @@ const bookingListing = async (req, res) => {
             { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
             { "cart.items.service.name": { $regex: search, $options: "i" } },
             { "partner.name": { $regex: search, $options: "i" } },
+            { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
+            { "assignedPartners.service.name": { $regex: search, $options: "i" } },
           ],
         },
       });
     }
 
-    // Group back the cart items to remove duplicate bookings
-    pipeline.push(
-      {
-        $group: {
-          _id: "$_id",
-          bookingData: { $first: "$$ROOT" },
-          cartItems: {
-            $push: "$cart.items"
-          }
-        }
-      },
-      {
-        $addFields: {
-          "bookingData.cart.items": "$cartItems"
-        }
-      },
-      {
-        $replaceRoot: { newRoot: "$bookingData" }
-      }
-    );
-
-    // Count
+    // Count total
     const countPipeline = [...pipeline, { $count: "total" }];
     const countResult = await BookingModel.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
@@ -1131,6 +1152,7 @@ const bookingListing = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 
 
 
