@@ -28,8 +28,7 @@ const userProfile = async (userId) => {
   }
 };
 //for generating 4 digit random otp
-const generateOTP = () =>
-    Math.floor(1000 + Math.random() * 9000).toString();
+const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 //For creating user
 // const registerUser = async (req, res) => {
 //   try {
@@ -138,8 +137,16 @@ const generateOTP = () =>
 //new one
 const registerUser = async (req, res) => {
   try {
-    const { img, name, email, password, phoneNo, address, location, referralCode } =
-      req.body;
+    const {
+      img,
+      name,
+      email,
+      password,
+      phoneNo,
+      address,
+      location,
+      referralCode,
+    } = req.body;
 
     // 1. Field Validations
     if (!img) return Helper.fail(res, "image is required");
@@ -154,7 +161,8 @@ const registerUser = async (req, res) => {
     if (!emailRegex.test(email)) return Helper.fail(res, "Email is not valid!");
 
     const phoneRegex = /^\d{6,14}$/;
-    if (!phoneRegex.test(phoneNo)) return Helper.fail(res, "Phone number is not valid!");
+    if (!phoneRegex.test(phoneNo))
+      return Helper.fail(res, "Phone number is not valid!");
 
     // 2. Check if user exists with same email or phoneNo
     const existingUser = await UserModel.findOne({
@@ -163,12 +171,16 @@ const registerUser = async (req, res) => {
     });
 
     if (existingUser) {
-      return Helper.fail(res, "User already exists with this email or phone number!");
+      return Helper.fail(
+        res,
+        "User already exists with this email or phone number!"
+      );
     }
 
     // 3. Generate referral code
     const generateReferralCode = async () => {
-      let isUnique = false, uniqueCode;
+      let isUnique = false,
+        uniqueCode;
       while (!isUnique) {
         const letters = String.fromCharCode(
           65 + Math.floor(Math.random() * 26),
@@ -195,9 +207,8 @@ const registerUser = async (req, res) => {
     // 5. Hash password
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // 6. Generate userName
-    let baseName = name.toLowerCase().replace(/\s+/g, '');
-    let lastThree = phoneNo.slice(-3);
+    let baseName = name.toLowerCase().replace(/\s+/g, "");
+    let lastThree = String(phoneNo).slice(-3);
     let userName = `${baseName}${lastThree}`;
 
     // Ensure username is unique
@@ -239,8 +250,7 @@ const updateUser = async (req, res) => {
     let userId = req.userId;
     let type = req.type;
     // console.log({type})
-    const { img, name, email, phoneNo, address, location } =
-      req.body;
+    const { img, name, email, phoneNo, address, location } = req.body;
     if (!userId) {
       return Helper.fail(res, "userId is missing from request");
     }
@@ -340,7 +350,7 @@ const fetchProfile = async (req, res) => {
     if (!user) {
       return Helper.fail(res, "user not found");
     }
-    return Helper.success(res, "Profile fetched successfully",user);
+    return Helper.success(res, "Profile fetched successfully", user);
   } catch (error) {
     console.log(error);
     return Helper.fail(res, "Failed to fetch profile");
@@ -385,12 +395,9 @@ const verifyOTP = async (req, res) => {
     }
     // let newotp = generateOTP();
     let newotp = "1234";
-    await UserModel.updateOne(
-      { number: number },
-      { $set: { otp: newotp } }
-    );
+    await UserModel.updateOne({ number: number }, { $set: { otp: newotp } });
     // Generate JWT token and user details
-    const type = "user"
+    const type = "user";
     const { token, userDetail } = await getUserWithToken(user._id, type);
     if (!token || !userDetail) {
       return Helper.error("Failed to generate token or get user profile");
@@ -405,7 +412,7 @@ const verifyOTP = async (req, res) => {
       console.log(`100 points credited to referrer: ${user.referredBy}`);
     }
     // send cookie
-    res.cookie("token", token)
+    res.cookie("token", token);
     return Helper.success(res, "Token generated successfully.", {
       token,
       userDetail,
@@ -424,7 +431,7 @@ const resendOTP = async (req, res) => {
       return Helper.fail(res, "Please provide phone number.");
     }
     // Find user using or number
-    const user = await UserModel.findOne({phoneNo: number});
+    const user = await UserModel.findOne({ phoneNo: number });
 
     if (!user) {
       return Helper.fail(res, "User not found!");
@@ -486,7 +493,7 @@ const resendOTP = async (req, res) => {
 // login using only phone number
 const loginUser = async (req, res) => {
   try {
-    const { phoneNo } = req.body
+    const { phoneNo } = req.body;
     if (!phoneNo) {
       return Helper.fail(res, "phone number is required");
     }
@@ -495,10 +502,8 @@ const loginUser = async (req, res) => {
       query.phoneNo = phoneNo;
     }
     const user = await UserModel.findOne({
-      $or: [phoneNo ? { phoneNo } : null].filter(
-        Boolean
-      ),
-      isDeleted: false
+      $or: [phoneNo ? { phoneNo } : null].filter(Boolean),
+      isDeleted: false,
     });
     if (!user) {
       return Helper.fail(res, "User not found ");
@@ -509,59 +514,59 @@ const loginUser = async (req, res) => {
     await user.save();
 
     // here code for send the otp to user's phone number
-    
+
     return Helper.success(res, "OTP sent successfull");
-  } 
-  catch (error) {
+  } catch (error) {
     console.log(error);
     return Helper.fail(res, "failed to send OTP");
   }
 };
 
 // get user current location
-const getUserLocation = async (req, res) =>{
+const getUserLocation = async (req, res) => {
   try {
     const userId = req.userId;
-    const { newLocation } = req.body
-    const user = await UserModel.findById(userId)
+    const { newLocation } = req.body;
+    const user = await UserModel.findById(userId);
     if (!user) {
       return Helper.fail(res, "user not found");
     }
-    if(!newLocation){
+    if (!newLocation) {
       return Helper.fail(res, "please select your location");
     }
-    let updatedLocation =  await UserModel.findByIdAndUpdate(
+    let updatedLocation = await UserModel.findByIdAndUpdate(
       userId,
-      {location : newLocation},
+      { location: newLocation },
       {
         new: true,
       }
     );
-    console.log({updatedLocation})
-    if(!updatedLocation){
+    console.log({ updatedLocation });
+    if (!updatedLocation) {
       return Helper.fail(res, "user location not updated");
     }
-    return Helper.success(res, "location updated successfully")
-  } 
-  catch (error) {
-    console.log(error)
+    return Helper.success(res, "location updated successfully");
+  } catch (error) {
+    console.log(error);
     return Helper.fail(res, "failed to update location");
   }
-}
+};
 
 // fetch referralCode
-const fetchReferralCode = async (req, res) =>{
-  const userId = req.userId
-  if(!userId){
-    return Helper.fail(res, "userId is required")
+const fetchReferralCode = async (req, res) => {
+  const userId = req.userId;
+  if (!userId) {
+    return Helper.fail(res, "userId is required");
   }
-  const referralCode = await UserModel.findOne({_id: userId, isDeleted: false})
-  .select("img name email phoneNo referralCode")
-  if(!referralCode){
-    return Helper.fail(res, "user not exist")
+  const referralCode = await UserModel.findOne({
+    _id: userId,
+    isDeleted: false,
+  }).select("img name email phoneNo referralCode");
+  if (!referralCode) {
+    return Helper.fail(res, "user not exist");
   }
-  return Helper.success(res, "referral code fetched", referralCode)
-}
+  return Helper.success(res, "referral code fetched", referralCode);
+};
 
 const listingUser = async (req, res) => {
   try {
@@ -586,8 +591,7 @@ const listingUser = async (req, res) => {
     const total = await UserModel.countDocuments(query);
     const totalPages = Math.ceil(total / parseInt(limit));
 
-    const users = await UserModel
-      .find(query)
+    const users = await UserModel.find(query)
       .skip(skip)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 });
@@ -605,7 +609,6 @@ const listingUser = async (req, res) => {
   }
 };
 
-
 module.exports = {
   registerUser,
   updateUser,
@@ -617,5 +620,5 @@ module.exports = {
   resendOTP,
   getUserLocation,
   fetchReferralCode,
-  listingUser
+  listingUser,
 };

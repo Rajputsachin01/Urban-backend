@@ -20,7 +20,7 @@ const SubCategorySchema = new mongoose.Schema({
         },
     isPublished: {
         type: Boolean,
-        default: false
+        default: true
     },
     isDeleted: {
         type: Boolean,

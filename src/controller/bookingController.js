@@ -853,6 +853,135 @@ const assignPartnerManually = async (req, res) => {
 // };
 
 //new one 
+// const bookingListing = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
+
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+//     const limitVal = parseInt(limit);
+
+//     const matchStage = {
+//       isDeleted: false,
+//     };
+
+//     if (bookingStatus) {
+//       matchStage.status = bookingStatus;
+//     }
+
+//     const pipeline = [
+//       { $match: matchStage },
+
+//       // Lookup user
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "user",
+//         },
+//       },
+//       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup partner
+//       {
+//         $lookup: {
+//           from: "partners",
+//           localField: "partnerId",
+//           foreignField: "_id",
+//           as: "partner",
+//         },
+//       },
+//       { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup cart
+//       {
+//         $lookup: {
+//           from: "carts",
+//           localField: "cartId",
+//           foreignField: "_id",
+//           as: "cart",
+//         },
+//       },
+//       { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
+
+//       // Unwind cart.items to lookup their category/service/subCategory
+//       { $unwind: { path: "$cart.items", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup service
+//       {
+//         $lookup: {
+//           from: "services",
+//           localField: "cart.items.serviceId",
+//           foreignField: "_id",
+//           as: "cart.items.service",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.service", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup category
+//       {
+//         $lookup: {
+//           from: "categories",
+//           localField: "cart.items.categoryId",
+//           foreignField: "_id",
+//           as: "cart.items.category",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.category", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup subCategory
+//       {
+//         $lookup: {
+//           from: "subcategories",
+//           localField: "cart.items.subCategoryId",
+//           foreignField: "_id",
+//           as: "cart.items.subCategory",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.subCategory", preserveNullAndEmptyArrays: true } },
+//     ];
+
+//     // Search on nested fields
+//     if (search) {
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             { "user.name": { $regex: search, $options: "i" } },
+//             { "user.email": { $regex: search, $options: "i" } },
+//             { "cart.items.category.name": { $regex: search, $options: "i" } },
+//             { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+//             { "cart.items.service.name": { $regex: search, $options: "i" } },
+//             { "partner.name": { $regex: search, $options: "i" } },
+//           ],
+//         },
+//       });
+//     }
+
+//     // Count
+//     const countPipeline = [...pipeline, { $count: "total" }];
+//     const countResult = await BookingModel.aggregate(countPipeline);
+//     const total = countResult.length > 0 ? countResult[0].total : 0;
+
+//     // Paginate
+//     pipeline.push({ $sort: { createdAt: -1 } });
+//     pipeline.push({ $skip: skip });
+//     pipeline.push({ $limit: limitVal });
+
+//     const bookings = await BookingModel.aggregate(pipeline);
+
+//     return Helper.success(res, "Booking list fetched successfully", {
+//       total,
+//       page: parseInt(page),
+//       limit: limitVal,
+//       totalPages: Math.ceil(total / limitVal),
+//       bookings,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return Helper.fail(res, error.message);
+//   }
+// };
+//new one 
 const bookingListing = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
@@ -957,6 +1086,27 @@ const bookingListing = async (req, res) => {
       });
     }
 
+    // Group back the cart items to remove duplicate bookings
+    pipeline.push(
+      {
+        $group: {
+          _id: "$_id",
+          bookingData: { $first: "$$ROOT" },
+          cartItems: {
+            $push: "$cart.items"
+          }
+        }
+      },
+      {
+        $addFields: {
+          "bookingData.cart.items": "$cartItems"
+        }
+      },
+      {
+        $replaceRoot: { newRoot: "$bookingData" }
+      }
+    );
+
     // Count
     const countPipeline = [...pipeline, { $count: "total" }];
     const countResult = await BookingModel.aggregate(countPipeline);
@@ -981,6 +1131,7 @@ const bookingListing = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 
 
 module.exports = {

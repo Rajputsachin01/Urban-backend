@@ -31,6 +31,128 @@ const partnerProfile = async (partnerId) => {
 //for generating 4 digit random otp
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 //For creating Partner
+// const createPartner = async (req, res) => {
+//   try {
+//     const {
+//       name,
+//       phoneNo,
+//       email,
+//       address,
+//       location,
+//       image,
+//       idProof,
+//       vehicleImage,
+//       drivingLicence,
+//       identityCard,
+//       createdBy,
+//       services
+//     } = req.body;
+
+//     // Validation for required fields
+//     if (!name) {
+//       return Helper.fail(res, "Name is required!");
+//     }
+//     if (!phoneNo) {
+//       return Helper.fail(res, "PhoneNo is required!");
+//     }
+//     if (!email) {
+//       return Helper.fail(res, "Email is required!");
+//     }
+//     if (!address) {
+//       return Helper.fail(res, "Address is required!");
+//     }
+//     if (!location) {
+//       return Helper.fail(res, "location is required!");
+//     }
+//     if (!image) {
+//       return Helper.fail(res, "Image is required!");
+//     }
+//     if (!idProof) {
+//       return Helper.fail(res, "IdProof is required!");
+//     }
+//     if (!vehicleImage) {
+//       return Helper.fail(res, "VehicleImage is required!");
+//     }
+//     if (!drivingLicence) {
+//       return Helper.fail(res, "DrivingLicence is required!");
+//     }
+//     if (!identityCard) {
+//       return Helper.fail(res, "IdentityCard is required!");
+//     }
+//     if (!createdBy) {
+//       return Helper.fail(res, "CreatedBy is required!");
+//     }
+//     if (!services) {
+//       return Helper.fail(res, "services is required!");
+//     }
+
+//     if (createdBy === "admin") {
+//       const data = {
+//         userName,
+//         name,
+//         phoneNo,
+//         email,
+//         address,
+//         location,
+//         image,
+//         idProof,
+//         vehicleImage,
+//         drivingLicence,
+//         identityCard,
+//         isVerified: true,
+//         services,
+//       };
+//       const create = await PartnerModel.create(data);
+
+//       if (!create) {
+//         return Helper.fail({ error: "data not saved" });
+//       }
+//       const type = "partner";
+//       const { token, partnerDetail } = await getPartnerWithToken(
+//         create._id,
+//         type
+//       );
+//       if (!token || !partnerDetail) {
+//         return Helper.error("Failed to generate token or get partner profile");
+//       }
+
+//       return Helper.success(res, "Partner created successfully", {
+//         token,
+//         partnerDetail,
+//       });
+//     }
+
+//     if (createdBy === "partner") {
+//       // const otp = generateOTP();
+//       const otp = "1234";
+//       const data = {
+//                 userName,
+//         name,
+//         phoneNo,
+//         email,
+//         address,
+//         location,
+//         image,
+//         idProof,
+//         vehicleImage,
+//         drivingLicence,
+//         identityCard,
+//         isVerified: false,
+//         otp,
+//         services,
+//       };
+
+//       const create = await PartnerModel.create(data);
+//       if (!create) {
+//         return res.status(400).json({ error: "data not saved" });
+//       }
+//       return Helper.success(res, "OTP sent successfully!", create);
+//     }
+//   } catch (error) {
+//     return Helper.fail(res, error.message);
+//   }
+// };
+//new one
 const createPartner = async (req, res) => {
   try {
     const {
@@ -45,46 +167,44 @@ const createPartner = async (req, res) => {
       drivingLicence,
       identityCard,
       createdBy,
-      services
+      services,
     } = req.body;
 
     // Validation for required fields
-    if (!name) {
-      return Helper.fail(res, "Name is required!");
+    if (!name) return Helper.fail(res, "Name is required!");
+    if (!phoneNo) return Helper.fail(res, "PhoneNo is required!");
+    if (!email) return Helper.fail(res, "Email is required!");
+    if (!address) return Helper.fail(res, "Address is required!");
+    if (!location) return Helper.fail(res, "Location is required!");
+    if (!image) return Helper.fail(res, "Image is required!");
+    if (!idProof) return Helper.fail(res, "IdProof is required!");
+    if (!vehicleImage) return Helper.fail(res, "VehicleImage is required!");
+    if (!drivingLicence) return Helper.fail(res, "DrivingLicence is required!");
+    if (!identityCard) return Helper.fail(res, "IdentityCard is required!");
+    if (!createdBy) return Helper.fail(res, "CreatedBy is required!");
+    if (!services) return Helper.fail(res, "Services is required!");
+
+    // Validate email and phoneNo uniqueness
+    const existingPartner = await PartnerModel.findOne({
+      $or: [{ email }, { phoneNo }],
+      isDeleted: false, // if you soft-delete partners
+    });
+    if (existingPartner) {
+      return Helper.fail(res, "Partner already exists with this email or phone number!");
     }
-    if (!phoneNo) {
-      return Helper.fail(res, "PhoneNo is required!");
-    }
-    if (!email) {
-      return Helper.fail(res, "Email is required!");
-    }
-    if (!address) {
-      return Helper.fail(res, "Address is required!");
-    }
-    if (!location) {
-      return Helper.fail(res, "location is required!");
-    }
-    if (!image) {
-      return Helper.fail(res, "Image is required!");
-    }
-    if (!idProof) {
-      return Helper.fail(res, "IdProof is required!");
-    }
-    if (!vehicleImage) {
-      return Helper.fail(res, "VehicleImage is required!");
-    }
-    if (!drivingLicence) {
-      return Helper.fail(res, "DrivingLicence is required!");
-    }
-    if (!identityCard) {
-      return Helper.fail(res, "IdentityCard is required!");
-    }
-    if (!createdBy) {
-      return Helper.fail(res, "CreatedBy is required!");
-    }
-    if (!services) {
-      return Helper.fail(res, "services is required!");
-    }
+
+    // Generate userName: name + last 3 digits of phoneNo in lowercase
+const last3Digits = String(phoneNo).slice(-3); // FIX here
+let userNameBase = `${name.trim().replace(/\s+/g, '').toLowerCase()}${last3Digits}`;
+
+// Ensure userName uniqueness (append number suffix if needed)
+let userName = userNameBase;
+let count = 0;
+while (await PartnerModel.findOne({ userName })) {
+  count++;
+  userName = `${userNameBase}${count}`;
+}
+
 
     if (createdBy === "admin") {
       const data = {
@@ -105,28 +225,21 @@ const createPartner = async (req, res) => {
       const create = await PartnerModel.create(data);
 
       if (!create) {
-        return Helper.fail({ error: "data not saved" });
+        return Helper.fail(res, { error: "Data not saved" });
       }
       const type = "partner";
-      const { token, partnerDetail } = await getPartnerWithToken(
-        create._id,
-        type
-      );
+      const { token, partnerDetail } = await getPartnerWithToken(create._id, type);
       if (!token || !partnerDetail) {
-        return Helper.error("Failed to generate token or get partner profile");
+        return Helper.fail(res, "Failed to generate token or get partner profile");
       }
 
-      return Helper.success(res, "Partner created successfully", {
-        token,
-        partnerDetail,
-      });
+      return Helper.success(res, "Partner created successfully", { token, partnerDetail });
     }
 
     if (createdBy === "partner") {
-      // const otp = generateOTP();
-      const otp = "1234";
+      const otp = "1234"; // replace with generateOTP() in prod
       const data = {
-                userName,
+        userName,
         name,
         phoneNo,
         email,
@@ -144,7 +257,7 @@ const createPartner = async (req, res) => {
 
       const create = await PartnerModel.create(data);
       if (!create) {
-        return res.status(400).json({ error: "data not saved" });
+        return Helper.fail(res, { error: "Data not saved" });
       }
       return Helper.success(res, "OTP sent successfully!", create);
     }
@@ -152,6 +265,7 @@ const createPartner = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 // For Verifing OTP
 const verifyOTP = async (req, res) => {
   // try {
