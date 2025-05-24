@@ -34,7 +34,7 @@ const createSubCategory = async (req, res) => {
 const updateSubCategory = async (req, res) => {
   try {
     const subCategoryId = req.params.id;
-    const { name, description, images } = req.body;
+    const { name, description, images ,categoryId} = req.body;
 
     if (!subCategoryId) return Helper.fail(res, "SubCategory ID is required");
 
@@ -51,6 +51,7 @@ const updateSubCategory = async (req, res) => {
     }
     if (description) updateObj.description = description;
     if (images) updateObj.images = images;
+    if (categoryId) updateObj.categoryId = categoryId;
 
     const updatedSubCategory = await SubCategoryModel.findByIdAndUpdate(subCategoryId, updateObj, { new: true });
     return Helper.success(res, "SubCategory updated successfully", updatedSubCategory);

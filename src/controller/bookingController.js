@@ -326,7 +326,6 @@ const findBookingById = async (req, res) => {
         populate: [
           {
             path: "items.serviceId",
-            select: "name", // 👈 service name
           },
           {
             path: "items.categoryId",
@@ -482,7 +481,6 @@ const cancelBooking = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 // fetch all users who have booking
 const usersBookingListing = async (req, res) => {
   try {
@@ -625,18 +623,17 @@ const getNearbyPartners = async (req, res) => {
     const booking = await BookingModel.findById(bookingId).populate("cartId");
     if (!booking) return Helper.fail(res, "Booking not found");
 
-    if (!booking.cartId || !booking.cartId.items || booking.cartId.items.length === 0) {
+    if (!booking.cartId?.items?.length) {
       return Helper.fail(res, "No services found in cart");
     }
 
-    // Cart ke items se serviceId nikal ke array banao
     const serviceIds = booking.cartId.items.map(item => item.serviceId);
 
-    if (!booking.location || !booking.location.coordinates) {
+    if (!booking.location?.coordinates) {
       return Helper.fail(res, "Booking location not found");
     }
 
-    // Step 2: Find partners providing all services
+    // Full match
     const fullMatchPartners = await PartnerModel.find({
       isDeleted: false,
       isAvailable: true,
@@ -652,15 +649,18 @@ const getNearbyPartners = async (req, res) => {
       },
     });
 
-    // Step 3: Return if full match found
     if (fullMatchPartners.length > 0) {
-      return Helper.success(res, "Partners providing all services found", fullMatchPartners);
+      return Helper.success(res, "Partners providing all services found", {
+        type: "fullMatch",
+        partners: fullMatchPartners,
+      });
     }
 
-    // Step 4: Otherwise find partners for each service separately
-    let serviceWisePartners = {};
+    // Partial match - service wise
+    const serviceWise = [];
+
     for (let serviceId of serviceIds) {
-      const partnersForService = await PartnerModel.find({
+      const partners = await PartnerModel.find({
         isDeleted: false,
         isAvailable: true,
         services: serviceId,
@@ -675,16 +675,24 @@ const getNearbyPartners = async (req, res) => {
         },
       }).select("name services location");
 
-      serviceWisePartners[serviceId] = partnersForService;
+      serviceWise.push({
+        serviceId,
+        partners,
+      });
     }
 
-    // Step 5: Return the service-wise partner list
-    return Helper.success(res, "Partners per service fetched", serviceWisePartners);
+    return Helper.success(res, "Partners per service fetched", {
+      type: "serviceWise",
+      partners: serviceWise,
+    });
   } catch (error) {
     console.error(error);
     return Helper.fail(res, error.message);
   }
 };
+
+
+
 
 
 // Admin manually assigns a partner to booking
@@ -982,20 +990,185 @@ const assignPartnerManually = async (req, res) => {
 //   }
 // };
 //new one 
+// const bookingListing = async (req, res) => {
+//   try {
+//     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
+
+//     const skip = (parseInt(page) - 1) * parseInt(limit);
+//     const limitVal = parseInt(limit);
+
+//     const matchStage = {
+//       isDeleted: false,
+//     };
+
+//     if (bookingStatus) {
+//       matchStage.status = bookingStatus;
+//     }
+
+//     const pipeline = [
+//       { $match: matchStage },
+
+//       // Lookup user
+//       {
+//         $lookup: {
+//           from: "users",
+//           localField: "userId",
+//           foreignField: "_id",
+//           as: "user",
+//         },
+//       },
+//       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup partner (main assigned partner if available)
+//       {
+//         $lookup: {
+//           from: "partners",
+//           localField: "partnerId",
+//           foreignField: "_id",
+//           as: "partner",
+//         },
+//       },
+//       { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup cart
+//       {
+//         $lookup: {
+//           from: "carts",
+//           localField: "cartId",
+//           foreignField: "_id",
+//           as: "cart",
+//         },
+//       },
+//       { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
+
+//       // Unwind cart items
+//       { $unwind: { path: "$cart.items", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup service for each item
+//       {
+//         $lookup: {
+//           from: "services",
+//           localField: "cart.items.serviceId",
+//           foreignField: "_id",
+//           as: "cart.items.service",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.service", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup category for each item
+//       {
+//         $lookup: {
+//           from: "categories",
+//           localField: "cart.items.categoryId",
+//           foreignField: "_id",
+//           as: "cart.items.category",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.category", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup subCategory for each item
+//       {
+//         $lookup: {
+//           from: "subcategories",
+//           localField: "cart.items.subCategoryId",
+//           foreignField: "_id",
+//           as: "cart.items.subCategory",
+//         },
+//       },
+//       { $unwind: { path: "$cart.items.subCategory", preserveNullAndEmptyArrays: true } },
+
+//       // Lookup assignedPartners (partner + service)
+//       { $unwind: { path: "$assignedPartners", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "partners",
+//           localField: "assignedPartners.partnerId",
+//           foreignField: "_id",
+//           as: "assignedPartners.partner",
+//         },
+//       },
+//       { $unwind: { path: "$assignedPartners.partner", preserveNullAndEmptyArrays: true } },
+//       {
+//         $lookup: {
+//           from: "services",
+//           localField: "assignedPartners.serviceId",
+//           foreignField: "_id",
+//           as: "assignedPartners.service",
+//         },
+//       },
+//       { $unwind: { path: "$assignedPartners.service", preserveNullAndEmptyArrays: true } },
+
+//       // Final grouping to merge everything back
+//       {
+//         $group: {
+//           _id: "$_id",
+//           bookingData: { $first: "$$ROOT" },
+//           cartItems: { $push: "$cart.items" },
+//           assignedPartners: { $push: "$assignedPartners" }
+//         }
+//       },
+//       {
+//         $addFields: {
+//           "bookingData.cart.items": "$cartItems",
+//           "bookingData.assignedPartners": "$assignedPartners"
+//         }
+//       },
+//       {
+//         $replaceRoot: { newRoot: "$bookingData" }
+//       }
+//     ];
+
+//     // Apply search if any
+//     if (search) {
+//       pipeline.push({
+//         $match: {
+//           $or: [
+//             { "user.name": { $regex: search, $options: "i" } },
+//             { "user.email": { $regex: search, $options: "i" } },
+//             { "cart.items.category.name": { $regex: search, $options: "i" } },
+//             { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+//             { "cart.items.service.name": { $regex: search, $options: "i" } },
+//             { "partner.name": { $regex: search, $options: "i" } },
+//             { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
+//             { "assignedPartners.service.name": { $regex: search, $options: "i" } },
+//           ],
+//         },
+//       });
+//     }
+
+//     // Count total
+//     const countPipeline = [...pipeline, { $count: "total" }];
+//     const countResult = await BookingModel.aggregate(countPipeline);
+//     const total = countResult.length > 0 ? countResult[0].total : 0;
+
+//     // Paginate
+//     pipeline.push({ $sort: { createdAt: -1 } });
+//     pipeline.push({ $skip: skip });
+//     pipeline.push({ $limit: limitVal });
+
+//     const bookings = await BookingModel.aggregate(pipeline);
+
+//     return Helper.success(res, "Booking list fetched successfully", {
+//       total,
+//       page: parseInt(page),
+//       limit: limitVal,
+//       totalPages: Math.ceil(total / limitVal),
+//       bookings,
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return Helper.fail(res, error.message);
+//   }
+// };
+
 const bookingListing = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
-
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
 
-    const matchStage = {
-      isDeleted: false,
-    };
-
-    if (bookingStatus) {
-      matchStage.status = bookingStatus;
-    }
+    const matchStage = { isDeleted: false };
+    if (bookingStatus) matchStage.status = bookingStatus;
 
     const pipeline = [
       { $match: matchStage },
@@ -1011,7 +1184,7 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
-      // Lookup partner (main assigned partner if available)
+      // Lookup partner (main assigned)
       {
         $lookup: {
           from: "partners",
@@ -1033,110 +1206,166 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
 
-      // Unwind cart items
-      { $unwind: { path: "$cart.items", preserveNullAndEmptyArrays: true } },
+      // Populate cart items with service, category, subCategory in separate stage
+      {
+        $addFields: {
+          "cart.items": {
+            $map: {
+              input: "$cart.items",
+              as: "item",
+              in: {
+                $mergeObjects: [
+                  "$$item",
+                  {
+                    service: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$$ROOT.servicesData",
+                            as: "svc",
+                            cond: { $eq: ["$$svc._id", "$$item.serviceId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                    category: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$$ROOT.categoriesData",
+                            as: "cat",
+                            cond: { $eq: ["$$cat._id", "$$item.categoryId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                    subCategory: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$$ROOT.subCategoriesData",
+                            as: "subcat",
+                            cond: { $eq: ["$$subcat._id", "$$item.subCategoryId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
 
-      // Lookup service for each item
+      // Preload services, categories, subcategories
       {
         $lookup: {
           from: "services",
-          localField: "cart.items.serviceId",
-          foreignField: "_id",
-          as: "cart.items.service",
+          pipeline: [],
+          as: "servicesData",
         },
       },
-      { $unwind: { path: "$cart.items.service", preserveNullAndEmptyArrays: true } },
-
-      // Lookup category for each item
       {
         $lookup: {
           from: "categories",
-          localField: "cart.items.categoryId",
-          foreignField: "_id",
-          as: "cart.items.category",
+          pipeline: [],
+          as: "categoriesData",
         },
       },
-      { $unwind: { path: "$cart.items.category", preserveNullAndEmptyArrays: true } },
-
-      // Lookup subCategory for each item
       {
         $lookup: {
           from: "subcategories",
-          localField: "cart.items.subCategoryId",
-          foreignField: "_id",
-          as: "cart.items.subCategory",
+          pipeline: [],
+          as: "subCategoriesData",
         },
       },
-      { $unwind: { path: "$cart.items.subCategory", preserveNullAndEmptyArrays: true } },
 
-      // Lookup assignedPartners (partner + service)
-      { $unwind: { path: "$assignedPartners", preserveNullAndEmptyArrays: true } },
+      // Assigned Partners Lookup without creating duplicates
+      {
+        $addFields: {
+          assignedPartners: {
+            $map: {
+              input: "$assignedPartners",
+              as: "assigned",
+              in: {
+                $mergeObjects: [
+                  "$$assigned",
+                  {
+                    partner: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$$ROOT.partnersData",
+                            as: "p",
+                            cond: { $eq: ["$$p._id", "$$assigned.partnerId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                    service: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: "$$ROOT.servicesData",
+                            as: "s",
+                            cond: { $eq: ["$$s._id", "$$assigned.serviceId"] },
+                          },
+                        },
+                        0,
+                      ],
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      },
+
+      // Preload all partners once
       {
         $lookup: {
           from: "partners",
-          localField: "assignedPartners.partnerId",
-          foreignField: "_id",
-          as: "assignedPartners.partner",
+          pipeline: [],
+          as: "partnersData",
         },
       },
-      { $unwind: { path: "$assignedPartners.partner", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "services",
-          localField: "assignedPartners.serviceId",
-          foreignField: "_id",
-          as: "assignedPartners.service",
-        },
-      },
-      { $unwind: { path: "$assignedPartners.service", preserveNullAndEmptyArrays: true } },
 
-      // Final grouping to merge everything back
-      {
-        $group: {
-          _id: "$_id",
-          bookingData: { $first: "$$ROOT" },
-          cartItems: { $push: "$cart.items" },
-          assignedPartners: { $push: "$assignedPartners" }
-        }
-      },
-      {
-        $addFields: {
-          "bookingData.cart.items": "$cartItems",
-          "bookingData.assignedPartners": "$assignedPartners"
-        }
-      },
-      {
-        $replaceRoot: { newRoot: "$bookingData" }
-      }
+      // Search filter
+      ...(search
+        ? [
+            {
+              $match: {
+                $or: [
+                  { "user.name": { $regex: search, $options: "i" } },
+                  { "user.email": { $regex: search, $options: "i" } },
+                  { "cart.items.service.name": { $regex: search, $options: "i" } },
+                  { "cart.items.category.name": { $regex: search, $options: "i" } },
+                  { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+                  { "partner.name": { $regex: search, $options: "i" } },
+                  { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
+                  { "assignedPartners.service.name": { $regex: search, $options: "i" } },
+                ],
+              },
+            },
+          ]
+        : []),
+
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limitVal },
     ];
 
-    // Apply search if any
-    if (search) {
-      pipeline.push({
-        $match: {
-          $or: [
-            { "user.name": { $regex: search, $options: "i" } },
-            { "user.email": { $regex: search, $options: "i" } },
-            { "cart.items.category.name": { $regex: search, $options: "i" } },
-            { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
-            { "cart.items.service.name": { $regex: search, $options: "i" } },
-            { "partner.name": { $regex: search, $options: "i" } },
-            { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
-            { "assignedPartners.service.name": { $regex: search, $options: "i" } },
-          ],
-        },
-      });
-    }
-
-    // Count total
-    const countPipeline = [...pipeline, { $count: "total" }];
+    // Count pipeline
+    const countPipeline = [...pipeline];
+    countPipeline.push({ $count: "total" });
     const countResult = await BookingModel.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
-
-    // Paginate
-    pipeline.push({ $sort: { createdAt: -1 } });
-    pipeline.push({ $skip: skip });
-    pipeline.push({ $limit: limitVal });
 
     const bookings = await BookingModel.aggregate(pipeline);
 
@@ -1149,7 +1378,7 @@ const bookingListing = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return Helper.fail(res, error.message);
+    return Helper.fail(res, error.message || "Something went wrong");
   }
 };
 
