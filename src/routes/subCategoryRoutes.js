@@ -11,6 +11,6 @@ router.post("/findById/:id",isAuth, findSubCategoryById)
 router.post("/remove",isAuth, removeSubCategory)
 router.post("/listing", listingSubCategory)
 router.post("/findAll", findAllSubCategories)
-router.post("/subCategoriesByCategory", subCategoryByCategoryId)
+router.post("/subCategoriesByCategory/:id", subCategoryByCategoryId)
 
 module.exports = router;
