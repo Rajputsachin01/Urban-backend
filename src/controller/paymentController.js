@@ -1,7 +1,8 @@
 const axios = require("axios");
 const crypto = require("crypto");
 const BookingModel = require("../models/bookingModel");
-const Helper = require("../utils/helper")
+const Helper = require("../utils/helper");
+const { InventoryConfigurationFilterSensitiveLog } = require("@aws-sdk/client-s3");
 
 const initiatePayment = async (req, res) => {
   try {
@@ -77,56 +78,61 @@ const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
 };
 
 // Signature verify helper
-const verifyCashfreeSignature = (body, signature, secret) => {
+const verifyCashfreeSignature = (rawBody, signature, secret) => {
   const generated = crypto
     .createHmac("sha256", secret)
-    .update(JSON.stringify(body))
+    .update(rawBody) // raw buffer
     .digest("base64");
   return generated === signature;
 };
 
 const handleCashfreeWebhook = async (req, res) => {
-  try {
-    const rawBody = req.body;
-    const signature = req.headers["x-cf-signature"];
+  console.log("i just hitted");
+  // try {
+  //   const rawBody = req.body; // raw buffer
+  //   console.log(rawBody,"hello");
+  //   const signature = req.headers["x-cf-signature"];
 
-    const parsed = JSON.parse(rawBody.toString());
+  //   const parsed = JSON.parse(rawBody.toString());
 
-    const isValid = verifyCashfreeSignature(parsed, signature, process.env.CASHFREE_CLIENT_SECRET);
-    if (!isValid) {
-      console.warn("Invalid Cashfree webhook signature");
-      return Helper.fail(res, "Invalid webhook signature");
-    }
+  //   const isValid = verifyCashfreeSignature(rawBody, signature, process.env.CASHFREE_CLIENT_SECRET);
+  //   if (!isValid) {
+  //     console.warn("Invalid Cashfree webhook signature");
+  //     return Helper.fail(res, "Invalid webhook signature");
+  //   }
 
-    const { order_id, order_status, payment_mode, payment_group, payment_id } = parsed;
-    if (!order_id || !payment_id) {
-            return Helper.fail(res, "Invalid payload");
+  //   const { order_id, order_status, payment_mode, payment_group, payment_id } = parsed;
 
-    }
+  //   if (!order_id || !payment_id) {
+  //     return Helper.fail(res, "Invalid payload");
+  //   }
 
-    const bookingId = order_id.split("_")[1];
-    const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false });
-    if (!booking) {
-            return Helper.fail(res, "Booking not found");
-    }
+  //   const bookingId = order_id.split("_")[1];
 
-    if (order_status === "PAID") {
-      booking.paymentStatus = "paid";
-      booking.paymentMode = payment_mode || payment_group;
-      booking.cashfreePaymentId = payment_id;
-      booking.cashfreeOrderId = order_id;
-    } else {
-      booking.paymentStatus = "failed";
-    }
+  //   const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false });
+  //   if (!booking) {
+  //     return Helper.fail(res, "Booking not found");
+  //   }
 
-    await booking.save();
-    console.log("✅ Webhook processed successfully");
-    return Helper.success(res,"Webhook processed" );
-  } catch (error) {
-    console.error("❌ Webhook Error:", error.message);
-    return Helper.error(res, "Internal Server Error" );
-  }
+  //   if (order_status === "PAID") {
+  //     booking.paymentStatus = "paid";
+  //     booking.paymentMode = payment_mode || payment_group;
+  //     booking.cashfreePaymentId = payment_id;
+  //     booking.cashfreeOrderId = order_id;
+  //   } else {
+  //     booking.paymentStatus = "failed";
+  //   }
+
+  //   await booking.save();
+
+  //   console.log("✅ Webhook processed successfully");
+  //   return Helper.success(res, "Webhook processed");
+  // } catch (error) {
+  //   console.error("❌ Webhook Error:", error.message);
+  //   return Helper.error(res, "Internal Server Error");
+  // }
 };
+
 
 module.exports = {
   initiatePayment,

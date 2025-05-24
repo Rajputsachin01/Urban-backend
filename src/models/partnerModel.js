@@ -88,10 +88,7 @@ const PartnerSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    services:[{
-         type: mongoose.Schema.Types.ObjectId,
-         ref: "service",
-    },]
+    services:[{ type: mongoose.Schema.Types.ObjectId, ref: "services" },]
 }, 
  { timestamps: true },
 );
