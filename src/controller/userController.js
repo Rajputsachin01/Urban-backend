@@ -247,74 +247,81 @@ const registerUser = async (req, res) => {
 //for updating User
 const updateUser = async (req, res) => {
   try {
-    let userId = req.userId;
-    let type = req.type;
-    // console.log({type})
-    const { img, name, email, phoneNo, address, location } = req.body;
+    const userId = req.userId;
+    const { img, name, email, phoneNo } = req.body;
+
     if (!userId) {
-      return Helper.fail(res, "userId is missing from request");
+      return Helper.fail(res, "User ID is missing from request");
     }
-    //validating email
-    if (email) {
+
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return Helper.fail(res, "User not found");
+    }
+
+    let objToUpdate = {};
+
+    // Validate and update name
+    if (name && name !== user.name) {
+      objToUpdate.name = name;
+    }
+
+    // Validate and update image
+    if (img && img !== user.img) {
+      objToUpdate.img = img;
+    }
+
+    // Validate and update email
+    if (email && email !== user.email) {
       const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
       if (!emailRegex.test(email)) {
         return Helper.fail(res, "Email is not valid!");
       }
-    }
-    // Validate mobile if provided
-    if (phoneNo) {
-      const phoneRegex = /^\d{6,14}$/;
-      if (!phoneRegex.test(phoneNo)) {
-        return Helper.fail(res, "phoneNo is not valid!");
-      }
-    }
-    let user = await UserModel.findById(userId);
-    if (!user) {
-      return Helper.fail(res, "user not found!");
-    }
-    let objToUpdate = {};
-    if (img) {
-      objToUpdate.img = img;
-    }
-    if (name) {
-      objToUpdate.name = name;
-    }
-    if (phoneNo) {
-      objToUpdate.phoneNo = phoneNo;
-    }
-    if (address) {
-      objToUpdate.address = address;
-    }
-    if (location) {
-      objToUpdate.location = location;
-    }
-    if (email) {
-      const emailRegex = new RegExp(`^${email}$`, "i");
-      const user = await UserModel.findOne({
-        email: emailRegex,
+
+      const existingEmailUser = await UserModel.findOne({
+        email: new RegExp(`^${email}$`, "i"),
         _id: { $ne: userId },
       });
-
-      if (user) {
+      if (existingEmailUser) {
         return Helper.fail(res, "Email is already used in another account");
       }
+
       objToUpdate.email = email;
     }
-    let updatedProfile = await UserModel.findByIdAndUpdate(
-      userId,
-      objToUpdate,
-      {
-        new: true,
+
+    // Validate and update phoneNo
+    if (phoneNo && phoneNo !== user.phoneNo) {
+      const phoneRegex = /^\d{6,14}$/;
+      if (!phoneRegex.test(phoneNo)) {
+        return Helper.fail(res, "Phone number is not valid!");
       }
-    );
-    if (updatedProfile) {
-      return Helper.success(res, "User  updated successfully!", updatedProfile);
+
+      const existingPhoneUser = await UserModel.findOne({
+        phoneNo,
+        _id: { $ne: userId },
+      });
+      if (existingPhoneUser) {
+        return Helper.fail(res, "Phone number is already used in another account");
+      }
+
+      objToUpdate.phoneNo = phoneNo;
     }
+    // Proceed with update only if something has changed
+    if (Object.keys(objToUpdate).length === 0) {
+      return Helper.success(res, "No changes detected in profile", user);
+    }
+
+    const updatedProfile = await UserModel.findByIdAndUpdate(userId, objToUpdate, {
+      new: true,
+    });
+
+    return Helper.success(res, "User updated successfully!", updatedProfile);
   } catch (error) {
     console.log(error);
     return Helper.fail(res, error.message);
   }
 };
+
 //for soft delete User
 const removeUser = async (req, res) => {
   try {
