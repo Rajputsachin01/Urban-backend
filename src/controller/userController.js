@@ -533,7 +533,7 @@ const loginUser = async (req, res) => {
 const getUserLocation = async (req, res) => {
   try {
     const userId = req.userId;
-    const { newLocation } = req.body;
+    const { newLocation, address } = req.body;
     const user = await UserModel.findById(userId);
     if (!user) {
       return Helper.fail(res, "user not found");
@@ -541,9 +541,12 @@ const getUserLocation = async (req, res) => {
     if (!newLocation) {
       return Helper.fail(res, "please select your location");
     }
+    if (!address) {
+      return Helper.fail(res, "please enter address");
+    }
     let updatedLocation = await UserModel.findByIdAndUpdate(
       userId,
-      { location: newLocation },
+      { location: newLocation, address },
       {
         new: true,
       }
