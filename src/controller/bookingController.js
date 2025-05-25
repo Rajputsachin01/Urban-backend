@@ -345,7 +345,7 @@ const findBookingById = async (req, res) => {
 
     return Helper.success(res, "Booking found successfully", booking);
   } catch (error) {
-    console.error("❌ findBookingById error:", error);
+    console.error("findBookingById error:", error);
     return Helper.fail(res, error.message);
   }
 };
@@ -1197,7 +1197,7 @@ const bookingListing = async (req, res) => {
       {
         $lookup: {
           from: "partners",
-          localField: "partnerId",
+          localField: "assignedPartners",
           foreignField: "_id",
           as: "partner",
         },

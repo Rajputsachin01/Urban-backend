@@ -110,15 +110,30 @@ const updateCartItemQuantity = async (req, res) => {
 
 const removeCartItem = async (req, res) => {
   try {
-    const userId  = req.userId;
+    const userId = req.userId;
     if (!userId) return Helper.fail(res, "User ID is required");
 
     const { serviceId } = req.body;
+    if (!serviceId) return Helper.fail(res, "Service ID is required");
 
-    const cart = await CartModel.findOne({ userId, isPurchased: false, isDeleted: false });
+    const cart = await CartModel.findOne({
+      userId,
+      isPurchased: false,
+      isDeleted: false,
+    });
+
     if (!cart) return Helper.fail(res, "Cart not found");
 
-    cart.items = cart.items.filter(item => item.serviceId.toString() !== serviceId);
+    const initialLength = cart.items.length;
+
+    cart.items = cart.items.filter(
+      (item) => item.serviceId.toString() !== serviceId
+    );
+
+    if (cart.items.length === initialLength) {
+      return Helper.fail(res, "Item not found in cart");
+    }
+
     await cart.save();
 
     return Helper.success(res, "Item removed from cart", cart);
@@ -127,6 +142,7 @@ const removeCartItem = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
+
 
 const deleteCart = async (req, res) => {
   try {
