@@ -4,6 +4,7 @@ const UserModel = require("../models/userModel");
 const CartModel = require("../models/cartModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
+const mongoose = require('mongoose')
 const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
 // helper function  for time slot
 const generateTimeSlots = (startTime, endTime, duration) => {
@@ -1166,8 +1167,16 @@ const bookingListing = async (req, res) => {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
+    const userId = req.userId;
+
+
+
 
     const matchStage = { isDeleted: false };
+    if (userId) {
+      matchStage.userId = new mongoose.Types.ObjectId(userId);
+    }
+
     if (bookingStatus) matchStage.status = bookingStatus;
 
     const pipeline = [
