@@ -1,5 +1,6 @@
 const CartModel = require("../models/cartModel");
 const Helper = require("../utils/helper")
+const mongoose = require('mongoose')
 
 const addToCart = async (req, res) => {
   try {
@@ -115,33 +116,34 @@ const removeCartItem = async (req, res) => {
 
     const { serviceId } = req.body;
     if (!serviceId) return Helper.fail(res, "Service ID is required");
+    const serviceObjectId = new mongoose.Types.ObjectId(serviceId);
 
-    const cart = await CartModel.findOne({
-      userId,
-      isPurchased: false,
-      isDeleted: false,
-    });
-
-    if (!cart) return Helper.fail(res, "Cart not found");
-
-    const initialLength = cart.items.length;
-
-    cart.items = cart.items.filter(
-      (item) => item.serviceId.toString() !== serviceId
+    const result = await CartModel.findOneAndUpdate(
+      {
+        userId,
+        isPurchased: false,
+        isDeleted: false,
+        "items._id": serviceObjectId,
+      },
+      {
+        $pull: {
+          items: {
+            _id: serviceObjectId,
+          },
+        },
+      },
+      { new: true }
     );
 
-    if (cart.items.length === initialLength) {
-      return Helper.fail(res, "Item not found in cart");
-    }
+    if (!result) return Helper.fail(res, "Cart or item not found");
 
-    await cart.save();
-
-    return Helper.success(res, "Item removed from cart", cart);
+    return Helper.success(res, "Item removed from cart", result);
   } catch (error) {
     console.error(error);
     return Helper.fail(res, error.message);
   }
 };
+
 
 
 const deleteCart = async (req, res) => {

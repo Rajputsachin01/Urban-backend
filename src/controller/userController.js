@@ -154,8 +154,8 @@ const registerUser = async (req, res) => {
     if (!email) return Helper.fail(res, "email is required");
     if (!password) return Helper.fail(res, "password is required");
     if (!phoneNo) return Helper.fail(res, "phoneNo is required");
-    if (!address) return Helper.fail(res, "address is required");
-    if (!location) return Helper.fail(res, "location is required");
+    // if (!address) return Helper.fail(res, "address is required");
+    // if (!location) return Helper.fail(res, "location is required");
 
     const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
     if (!emailRegex.test(email)) return Helper.fail(res, "Email is not valid!");
