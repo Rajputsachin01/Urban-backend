@@ -1177,7 +1177,7 @@ const bookingListing = async (req, res) => {
       matchStage.userId = new mongoose.Types.ObjectId(userId);
     }
 
-    if (bookingStatus) matchStage.status = bookingStatus;
+    if (bookingStatus) matchStage.bookingStatus = bookingStatus;
 
     const pipeline = [
       { $match: matchStage },
