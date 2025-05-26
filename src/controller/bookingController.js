@@ -4,6 +4,7 @@ const UserModel = require("../models/userModel");
 const CartModel = require("../models/cartModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
+const mongoose = require('mongoose')
 const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
 // helper function  for time slot
 const generateTimeSlots = (startTime, endTime, duration) => {
@@ -344,7 +345,7 @@ const findBookingById = async (req, res) => {
 
     return Helper.success(res, "Booking found successfully", booking);
   } catch (error) {
-    console.error("❌ findBookingById error:", error);
+    console.error("findBookingById error:", error);
     return Helper.fail(res, error.message);
   }
 };
@@ -1256,9 +1257,17 @@ const bookingListing = async (req, res) => {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
+    const userId = req.userId;
+
+
+
 
     const matchStage = { isDeleted: false };
-    if (bookingStatus) matchStage.status = bookingStatus;
+    if (userId) {
+      matchStage.userId = new mongoose.Types.ObjectId(userId);
+    }
+
+    if (bookingStatus) matchStage.bookingStatus = bookingStatus;
 
     const pipeline = [
       { $match: matchStage },
@@ -1278,7 +1287,7 @@ const bookingListing = async (req, res) => {
       {
         $lookup: {
           from: "partners",
-          localField: "partnerId",
+          localField: "assignedPartners",
           foreignField: "_id",
           as: "partner",
         },
