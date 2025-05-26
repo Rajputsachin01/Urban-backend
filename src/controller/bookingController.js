@@ -691,6 +691,96 @@ const getNearbyPartners = async (req, res) => {
   }
 };
 
+//for new logic
+// const { isPartnerAvailableInTimeWindow } = require("../utils/partnerAvailability");
+
+// const getNearbyPartners = async (req, res) => {
+//   try {
+//     const { bookingId } = req.body;
+
+//     const booking = await BookingModel.findById(bookingId).populate("cartId");
+//     if (!booking) return Helper.fail(res, "Booking not found");
+
+//     if (!booking.cartId?.items?.length) {
+//       return Helper.fail(res, "No services found in cart");
+//     }
+
+//     const serviceIds = booking.cartId.items.map(item => item.serviceId);
+//     const { coordinates } = booking.location || {};
+//     const { startTime, endTime } = booking;
+
+//     if (!coordinates || !startTime || !endTime) {
+//       return Helper.fail(res, "Incomplete booking details");
+//     }
+
+//     // Get full match partners
+//     const potentialPartners = await PartnerModel.find({
+//       isDeleted: false,
+//       isAvailable: true,
+//       services: { $all: serviceIds },
+//       location: {
+//         $near: {
+//           $geometry: { type: "Point", coordinates },
+//           $maxDistance: 20000,
+//         },
+//       },
+//     });
+
+//     const fullMatchPartners = [];
+
+//     for (let partner of potentialPartners) {
+//       const isFree = await isPartnerAvailableInTimeWindow(partner._id, startTime, endTime);
+//       if (isFree) fullMatchPartners.push(partner);
+//     }
+
+//     if (fullMatchPartners.length > 0) {
+//       return Helper.success(res, "Available full-match partners found", {
+//         type: "fullMatch",
+//         partners: fullMatchPartners,
+//       });
+//     }
+
+//     // Service-wise partial match
+//     const serviceWise = [];
+
+//     for (let serviceId of serviceIds) {
+//       const partners = await PartnerModel.find({
+//         isDeleted: false,
+//         isAvailable: true,
+//         services: serviceId,
+//         location: {
+//           $near: {
+//             $geometry: { type: "Point", coordinates },
+//             $maxDistance: 20000,
+//           },
+//         },
+//       }).select("name services location");
+
+//       const availablePartners = [];
+
+//       for (let partner of partners) {
+//         const isFree = await isPartnerAvailableInTimeWindow(partner._id, startTime, endTime);
+//         if (isFree) availablePartners.push(partner);
+//       }
+
+//       serviceWise.push({
+//         serviceId,
+//         partners: availablePartners,
+//       });
+//     }
+
+//     return Helper.success(res, "Partners per service fetched", {
+//       type: "serviceWise",
+//       partners: serviceWise,
+//     });
+
+//   } catch (error) {
+//     console.error(error);
+//     return Helper.fail(res, error.message);
+//   }
+// };
+
+
 
 
 

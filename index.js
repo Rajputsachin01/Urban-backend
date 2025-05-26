@@ -7,12 +7,14 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const paymentController = require("./src/controller/paymentController");
 
-// ✅ STEP 1: Webhook route sabse pehle daalo — BEFORE bodyParser!
-app.post(
-  "/v1/payment/webhook",
-  express.raw({ type: "application/json" }),
-  paymentController.handleCashfreeWebhook
-);
+// ✅ STEP 3: Connect DB
+require("./src/utils/db");
+// 🔒 Step 1: Webhook middleware sabse upar
+// app.use("/v1/payment/webhook", express.raw({ type: "*/*" }));
+
+// 🚀 Step 2: Webhook route
+app.post("/v1/payment/webhook", paymentController.handleCashfreeWebhook);
+
 
 
 
@@ -26,8 +28,7 @@ app.use(bodyParser.json()); // normal JSON parsing for other routes
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ✅ STEP 3: Connect DB
-require("./src/utils/db");
+
 // const cron = require("node-cron");
 // const expireAndReassign = require("./src/utils/expireAndReaasign");
 
