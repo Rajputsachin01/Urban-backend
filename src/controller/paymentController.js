@@ -10,16 +10,12 @@ const initiatePayment = async (req, res) => {
 
     const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
       .populate("userId", "email phoneNo")
-      .select("totalPrice userId");
-
+      .select("totalPrice userId paymentLogs");
     if (!booking) return Helper.fail(res, "Booking not found");
-
     const amount = parseFloat(booking.totalPrice);
     const email = booking.userId?.email;
-const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
-
+    const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
     if (!email) return Helper.fail(res, "User email not found");
-
     const orderId = `ORDER_${bookingId}_${Date.now()}`;
 
     const isSandbox = process.env.CASHFREE_ENV === "SANDBOX";
@@ -33,11 +29,11 @@ const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
       order_currency: "INR",
       customer_details: {
         customer_id: booking.userId._id.toString(),
-        customer_email: email,
+        customer_emaisl: email,
         customer_phone: phoneNo,
       },
       order_meta: {
-        return_url: `${process.env.FRONTEND_URL}?order_id=${orderId}`,
+        return_url: `${process.env.FRONTEND_URL}/paymentStatus?order_id=${orderId}`,
         notify_url: `${process.env.BACKEND_URL}/v1/payment/webhook`,
       },
     };
@@ -56,8 +52,17 @@ const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
       return Helper.fail(res, "Cashfree order creation failed");
     }
 
-    // Save order ID
+    // Save order ID & push log
     booking.cashfreeOrderId = orderId;
+
+    booking.paymentLogs.push({
+      initiatedAt: new Date(),
+      type: "initiate",
+      cashfreeOrderId: orderId,
+      requestPayload: payload,
+      responsePayload: orderData,
+    });
+
     await booking.save();
 
     return Helper.success(res, "Cashfree order created", {
@@ -74,7 +79,72 @@ const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
     });
     return Helper.fail(res, "Failed to create Cashfree order");
   }
+}
+
+const verifyPayment = async (req, res) => {
+  try {
+    const { bookingId } = req.body;
+    if (!bookingId) return Helper.fail(res, "Booking ID is required");
+
+    const booking = await BookingModel.findOne({ _id: bookingId, isDeleted: false })
+      .select("cashfreeOrderId paymentStatus totalPrice paymentLogs");
+
+    if (!booking) return Helper.fail(res, "Booking not found");
+
+    if (!booking.cashfreeOrderId) {
+      return Helper.fail(res, "Cashfree Order ID not found for this booking");
+    }
+
+    const isSandbox = process.env.CASHFREE_ENV === "SANDBOX";
+    const baseUrl = isSandbox
+      ? "https://sandbox.cashfree.com/pg/orders/"
+      : "https://api.cashfree.com/pg/orders/";
+
+    const headers = {
+      "Content-Type": "application/json",
+      "x-client-id": process.env.CASHFREE_CLIENT_ID,
+      "x-client-secret": process.env.CASHFREE_CLIENT_SECRET,
+      "x-api-version": "2022-01-01",
+    };
+
+    const response = await axios.get(`${baseUrl}${booking.cashfreeOrderId}`, {
+      headers,
+    });
+
+    const order = response.data;
+
+    // Push verification log
+    booking.paymentLogs.push({
+      verifiedAt: new Date(),
+      type: "verify",
+      cashfreeOrderId: booking.cashfreeOrderId,
+      responsePayload: order,
+    });
+
+    if (order.order_status === "PAID") {
+      booking.paymentStatus = "PAID";
+      await booking.save();
+
+      return Helper.success(res, "Payment verified successfully", {
+        order_id: order.order_id,
+        amount: order.order_amount,
+        status: order.order_status,
+      });
+    } else {
+      await booking.save(); // Save log even if not paid
+      return Helper.fail(res, `Payment not completed. Status: ${order.order_status}`);
+    }
+  } catch (err) {
+    console.error("Payment Verification Error:", {
+      message: err.message,
+      response: err.response?.data,
+      status: err.response?.status,
+    });
+
+    return Helper.fail(res, "Failed to verify payment");
+  }
 };
+
 
 // adjust path as per your project
 
@@ -90,7 +160,6 @@ const verifyCashfreeSignature = (rawBody, signature, secret) => {
 
   return generated === signature;
 };
-
 const handleCashfreeWebhook = async (req, res) => {
   try {
     const rawBody = req.body; // should be Buffer due to express.raw()
@@ -143,91 +212,8 @@ const handleCashfreeWebhook = async (req, res) => {
     return Helper.error(res, "🚨 Webhook Internal Error");
   }
 };
-
-
-
-
-
-
-// const handleCashfreeWebhook = async (req, res) => {
-//   try {
-//     const rawBody = req.body; // Buffer from raw parser
-//     const signature = req.headers["x-webhook-signature"];
-//     if (!signature) return Helper.fail(res, "Missing webhook signature");
-
-//     const generatedSignature = crypto
-//       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
-//       .update(rawBody)
-//       .digest("base64");
-
-//     console.log("Received signature:", signature);
-//     console.log("Generated signature:", generatedSignature);
-
-//     if (generatedSignature !== signature) {
-//       console.warn("❌ Invalid signature");
-//       return Helper.fail(res, "Invalid webhook signature");
-//     }
-
-//     const parsed = JSON.parse(rawBody.toString("utf-8"));
-//     console.log("Parsed payload:", parsed);
-
-//     // rest of your logic here
-//   } catch (error) {
-//     console.error("Webhook error:", error);
-//     return Helper.error(res, "Internal Server Error");
-//   }
-// };
-//new one
-// const handleCashfreeWebhook = async (req, res) => {
-//   try {
-//     const rawBody = req.body;
-//     const signature = req.headers["x-webhook-signature"];
-
-//     if (!signature) return Helper.fail(res, "Missing webhook signature");
-
-//     // Check if rawBody is a buffer
-//     if (!Buffer.isBuffer(rawBody)) {
-//       console.error("Webhook raw body is not a buffer");
-//       return Helper.fail(res, "Invalid payload format");
-//     }
-
-//     // Generate signature
-//     const generatedSignature = crypto
-//       .createHmac("sha256", process.env.CASHFREE_CLIENT_SECRET)
-//       .update(rawBody)
-//       .digest("base64");
-
-//     console.log("Received signature:", signature);
-//     console.log("Generated signature:", generatedSignature);
-
-//     // Verify signature
-//     if (generatedSignature !== signature) {
-//       console.warn("❌ Invalid signature");
-//       return Helper.fail(res, "Invalid webhook signature");
-//     }
-
-//     // Parse payload
-//     const parsed = JSON.parse(rawBody.toString("utf-8"));
-//     console.log("✅ Webhook payload verified:", parsed);
-
-  
-
-//     return res.status(200).send("Webhook received");
-//   } catch (error) {
-//     console.error("Webhook error:", error);
-//     return Helper.error(res, "Internal Server Error");
-//   }
-// };
-
-
-
-
-
-
-
-
-
 module.exports = {
   initiatePayment,
+  verifyPayment,
   handleCashfreeWebhook,
 };

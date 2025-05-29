@@ -150,6 +150,11 @@ const BookingSchema = new mongoose.Schema(
       enum: ["cash", "upi", "card", "netbanking", "wallet"],
       // required: true,
     },
+    paymentLogs: {
+      type: [Object],
+      default: [],
+    },
+
     paymentStatus: {
       type: String,
       enum: ["pending", "paid", "failed"],

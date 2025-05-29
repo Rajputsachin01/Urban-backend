@@ -5,20 +5,7 @@ const app = express();
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
-const paymentController = require("./src/controller/paymentController");
-
-// ✅ STEP 3: Connect DB
 require("./src/utils/db");
-// 🔒 Step 1: Webhook middleware sabse upar
-// app.use("/v1/payment/webhook", express.raw({ type: "*/*" }));
-
-// 🚀 Step 2: Webhook route
-app.post("/v1/payment/webhook", paymentController.handleCashfreeWebhook);
-
-
-
-
-// ✅ STEP 2: Baaki middleware ab aayenge
 app.use(cors({
   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE"],
@@ -37,7 +24,7 @@ app.use(cookieParser());
 //   await expireAndReassign();
 // });
 
-// ✅ STEP 4: All other routes
+
 const userRoutes = require("./src/routes/userRoutes");
 const bannerRoutes = require("./src/routes/bannerRoutes");
 const adminRoutes = require("./src/routes/adminRoutes");
@@ -74,12 +61,10 @@ app.use("/v1/activity", cliclAndViewsRoutes);
 app.use("/v1/payment", paymentRoutes);
 app.use("/v1/cart", cartRoutes);
 
-// ✅ Server start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
-
 app.get("/", (req, res) => {
   res.send("Server is Active");
 });
