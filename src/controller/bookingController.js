@@ -4,7 +4,7 @@ const UserModel = require("../models/userModel");
 const CartModel = require("../models/cartModel");
 const Helper = require("../utils/helper");
 const moment = require("moment");
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
 const { autoAssignFromBookingId } = require("../utils/autoAssignPartner");
 // helper function  for time slot
 const generateTimeSlots = (startTime, endTime, duration) => {
@@ -40,7 +40,8 @@ const initiateBooking = async (req, res) => {
     if (!userId) return Helper.fail(res, "user id is required");
     if (!serviceId) return Helper.fail(res, "service id is required");
     if (!subCategoryId) return Helper.fail(res, "subCategoryId id is required");
-    if (!unitQuantity || unitQuantity <= 0) return Helper.fail(res, "Valid unit quantity is required");
+    if (!unitQuantity || unitQuantity <= 0)
+      return Helper.fail(res, "Valid unit quantity is required");
 
     // Step 1: Fetch user details (address[0] and location)
     const user = await UserModel.findById(userId).select("address location");
@@ -102,16 +103,25 @@ const initiateBookingFromCart = async (req, res) => {
     if (!cartId) return Helper.fail(res, "Cart ID is required");
 
     const user = await UserModel.findById(userId).select("address location");
-    if (!user || !user.address?.length) return Helper.fail(res, "Invalid user or address");
+    if (!user || !user.address?.length)
+      return Helper.fail(res, "Invalid user or address");
 
     const userLocation = user.location;
     if (
-      !userLocation || userLocation.type !== "Point" ||
-      !Array.isArray(userLocation.coordinates) || userLocation.coordinates.length !== 2
-    ) return Helper.fail(res, "Invalid user location");
+      !userLocation ||
+      userLocation.type !== "Point" ||
+      !Array.isArray(userLocation.coordinates) ||
+      userLocation.coordinates.length !== 2
+    )
+      return Helper.fail(res, "Invalid user location");
 
-    const cart = await CartModel.findOne({ _id: cartId, userId, isPurchased: false }).populate("items.serviceId");
-    if (!cart || cart.items.length === 0) return Helper.fail(res, "Cart not found or empty");
+    const cart = await CartModel.findOne({
+      _id: cartId,
+      userId,
+      isPurchased: false,
+    }).populate("items.serviceId");
+    if (!cart || cart.items.length === 0)
+      return Helper.fail(res, "Cart not found or empty");
 
     let finalPrice = 0;
     for (const item of cart.items) {
@@ -137,7 +147,6 @@ const initiateBookingFromCart = async (req, res) => {
     return Helper.fail(res, "Failed to create booking");
   }
 };
-
 
 // get location and address
 const getLocationAndAddress = async (req, res) => {
@@ -200,7 +209,7 @@ const getLocationAndAddress = async (req, res) => {
 //     return Helper.fail(res, "Failed to generate time slots");
 //   }
 // };
-//new one 
+//new one
 const fetchTimeSlots = async (req, res) => {
   try {
     const { bookingId } = req.body;
@@ -238,7 +247,10 @@ const fetchTimeSlots = async (req, res) => {
       const timeInMinutes = Number(service.time);
 
       if (!service || isNaN(timeInMinutes)) {
-        return Helper.fail(res, "Service time missing or invalid for one or more items");
+        return Helper.fail(
+          res,
+          "Service time missing or invalid for one or more items"
+        );
       }
 
       totalTime += timeInMinutes;
@@ -254,13 +266,20 @@ const fetchTimeSlots = async (req, res) => {
     );
 
     if (totalTime > availableMinutes) {
-      return Helper.fail(res, "Total service time exceeds available business hours");
+      return Helper.fail(
+        res,
+        "Total service time exceeds available business hours"
+      );
     }
 
     const timeSlots = generateTimeSlots(businessStart, businessEnd, totalTime);
 
     if (timeSlots.length === 0) {
-      return Helper.success(res, "No available slots for the given service duration", []);
+      return Helper.success(
+        res,
+        "No available slots for the given service duration",
+        []
+      );
     }
 
     return Helper.success(res, "Time slots generated", timeSlots);
@@ -288,21 +307,7 @@ const selectDateAndTimeslot = async (req, res) => {
     if (!dateAndTime) {
       return Helper.fail(res, "Booking not found or already deleted");
     }
-    const assignResult = await autoAssignFromBookingId(bookingId);
-
-    if (!assignResult.success) {
-      return Helper.fail(
-        res,
-        "Date/time updated but partner not assigned: " + assignResult.message,
-        dateAndTime
-      );
-    }
-
-    return Helper.success(
-      res,
-      "Booking date and time updated, partner auto-assigned",
-      assignResult.data
-    );
+    return Helper.success(res, "Booking date and time updated", dateAndTime);
   } catch (error) {
     console.error(error);
     return Helper.fail(res, "Failed to add date and time slot");
@@ -628,7 +633,7 @@ const getNearbyPartners = async (req, res) => {
       return Helper.fail(res, "No services found in cart");
     }
 
-    const serviceIds = booking.cartId.items.map(item => item.serviceId);
+    const serviceIds = booking.cartId.items.map((item) => item.serviceId);
 
     if (!booking.location?.coordinates) {
       return Helper.fail(res, "Booking location not found");
@@ -781,11 +786,6 @@ const getNearbyPartners = async (req, res) => {
 //   }
 // };
 
-
-
-
-
-
 // Admin manually assigns a partner to booking
 // const assignPartnerManually = async (req, res) => {
 //   try {
@@ -825,7 +825,10 @@ const assignPartnerManually = async (req, res) => {
     // Validate all partners and services
     for (const { serviceId, partnerId } of assignments) {
       if (!serviceId || !partnerId) {
-        return Helper.fail(res, "serviceId and partnerId are required for all assignments");
+        return Helper.fail(
+          res,
+          "serviceId and partnerId are required for all assignments"
+        );
       }
 
       const partner = await PartnerModel.findById(partnerId);
@@ -835,7 +838,10 @@ const assignPartnerManually = async (req, res) => {
 
       // Optionally: Check if partner provides that service
       if (!partner.services.includes(serviceId)) {
-        return Helper.fail(res, `Partner ${partnerId} does not provide service ${serviceId}`);
+        return Helper.fail(
+          res,
+          `Partner ${partnerId} does not provide service ${serviceId}`
+        );
       }
     }
 
@@ -850,7 +856,6 @@ const assignPartnerManually = async (req, res) => {
     return Helper.error(res, "Failed to assign partners");
   }
 };
-
 
 // const bookingListing = async (req, res) => {
 //   try {
@@ -951,7 +956,7 @@ const assignPartnerManually = async (req, res) => {
 //   }
 // };
 
-//new one 
+//new one
 // const bookingListing = async (req, res) => {
 //   try {
 //     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
@@ -1080,7 +1085,7 @@ const assignPartnerManually = async (req, res) => {
 //     return Helper.fail(res, error.message);
 //   }
 // };
-//new one 
+//new one
 // const bookingListing = async (req, res) => {
 //   try {
 //     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
@@ -1257,10 +1262,7 @@ const bookingListing = async (req, res) => {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
-    const userId = req.userId;
-
-
-
+    const userId = req.adminId;
 
     const matchStage = { isDeleted: false };
     if (userId) {
@@ -1346,7 +1348,9 @@ const bookingListing = async (req, res) => {
                           $filter: {
                             input: "$$ROOT.subCategoriesData",
                             as: "subcat",
-                            cond: { $eq: ["$$subcat._id", "$$item.subCategoryId"] },
+                            cond: {
+                              $eq: ["$$subcat._id", "$$item.subCategoryId"],
+                            },
                           },
                         },
                         0,
@@ -1443,12 +1447,37 @@ const bookingListing = async (req, res) => {
                 $or: [
                   { "user.name": { $regex: search, $options: "i" } },
                   { "user.email": { $regex: search, $options: "i" } },
-                  { "cart.items.service.name": { $regex: search, $options: "i" } },
-                  { "cart.items.category.name": { $regex: search, $options: "i" } },
-                  { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+                  {
+                    "cart.items.service.name": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
+                  {
+                    "cart.items.category.name": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
+                  {
+                    "cart.items.subCategory.name": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
                   { "partner.name": { $regex: search, $options: "i" } },
-                  { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
-                  { "assignedPartners.service.name": { $regex: search, $options: "i" } },
+                  {
+                    "assignedPartners.partner.name": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
+                  {
+                    "assignedPartners.service.name": {
+                      $regex: search,
+                      $options: "i",
+                    },
+                  },
                 ],
               },
             },
@@ -1481,9 +1510,6 @@ const bookingListing = async (req, res) => {
   }
 };
 
-
-
-
 module.exports = {
   initiateBooking,
   initiateBookingFromCart,
@@ -1500,6 +1526,5 @@ module.exports = {
   userBookingHistoryOrPending,
   cancelBooking,
   usersBookingListing,
-bookingListing
-  
+  bookingListing,
 };

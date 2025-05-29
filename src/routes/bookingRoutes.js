@@ -36,6 +36,4 @@ router.post("/cancel/:id", isAuth, cancelBooking);
 router.post("/findById/:id", isAuth, findBookingById);
 router.post("/usersBookingListing", isAuth, usersBookingListing);
 router.post("/bookingListing", isAuth, bookingListing);
-
-
 module.exports = router;
