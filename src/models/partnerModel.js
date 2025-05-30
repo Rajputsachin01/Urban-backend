@@ -24,19 +24,16 @@ const PartnerSchema = new mongoose.Schema({
     },
     address: {
         type: String,
-        required: true,
         default: "",
     },
     location: {
         type: {
           type: String,
           enum: ['Point'],
-          required: true,
           default: 'Point'
         },
         coordinates: {
           type: [Number], 
-          required: true,
           default: [0, 0]
         }
       },      

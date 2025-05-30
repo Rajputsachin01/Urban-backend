@@ -31,7 +31,6 @@ const generateTimeSlots = (startTime, endTime, duration) => {
 
   return slots;
 };
-// initiate Booking
 const initiateBooking = async (req, res) => {
   try {
     const userId = req.userId;
@@ -94,6 +93,7 @@ const initiateBooking = async (req, res) => {
     return Helper.fail(res, "Failed to initiate booking");
   }
 };
+// initiate Booking
 const initiateBookingFromCart = async (req, res) => {
   try {
     const userId = req.userId;
@@ -137,10 +137,6 @@ const initiateBookingFromCart = async (req, res) => {
       price: finalPrice,
       totalPrice: finalPrice, // discount logic can be added
     });
-
-    // cart.isPurchased = true;
-    // await cart.save();
-
     return Helper.success(res, "Booking created successfully", booking);
   } catch (err) {
     console.error(err);
@@ -1262,16 +1258,15 @@ const bookingListing = async (req, res) => {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const limitVal = parseInt(limit);
-    const userId = req.adminId;
+    const userId = req.userId;
 
     const matchStage = { isDeleted: false };
-    if (userId) {
+    if (req.type === "user") {
       matchStage.userId = new mongoose.Types.ObjectId(userId);
     }
-
     if (bookingStatus) matchStage.bookingStatus = bookingStatus;
 
-    const pipeline = [
+    const basePipeline = [
       { $match: matchStage },
 
       // Lookup user
@@ -1285,17 +1280,6 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
 
-      // Lookup partner (main assigned)
-      {
-        $lookup: {
-          from: "partners",
-          localField: "assignedPartners",
-          foreignField: "_id",
-          as: "partner",
-        },
-      },
-      { $unwind: { path: "$partner", preserveNullAndEmptyArrays: true } },
-
       // Lookup cart
       {
         $lookup: {
@@ -1307,7 +1291,12 @@ const bookingListing = async (req, res) => {
       },
       { $unwind: { path: "$cart", preserveNullAndEmptyArrays: true } },
 
-      // Populate cart items with service, category, subCategory in separate stage
+      // Preload related data
+      { $lookup: { from: "services", pipeline: [], as: "servicesData" } },
+      { $lookup: { from: "categories", pipeline: [], as: "categoriesData" } },
+      { $lookup: { from: "subcategories", pipeline: [], as: "subCategoriesData" } },
+
+      // Add full service info to cart.items
       {
         $addFields: {
           "cart.items": {
@@ -1322,7 +1311,7 @@ const bookingListing = async (req, res) => {
                       $arrayElemAt: [
                         {
                           $filter: {
-                            input: "$$ROOT.servicesData",
+                            input: "$servicesData",
                             as: "svc",
                             cond: { $eq: ["$$svc._id", "$$item.serviceId"] },
                           },
@@ -1334,7 +1323,7 @@ const bookingListing = async (req, res) => {
                       $arrayElemAt: [
                         {
                           $filter: {
-                            input: "$$ROOT.categoriesData",
+                            input: "$categoriesData",
                             as: "cat",
                             cond: { $eq: ["$$cat._id", "$$item.categoryId"] },
                           },
@@ -1346,11 +1335,9 @@ const bookingListing = async (req, res) => {
                       $arrayElemAt: [
                         {
                           $filter: {
-                            input: "$$ROOT.subCategoriesData",
+                            input: "$subCategoriesData",
                             as: "subcat",
-                            cond: {
-                              $eq: ["$$subcat._id", "$$item.subCategoryId"],
-                            },
+                            cond: { $eq: ["$$subcat._id", "$$item.subCategoryId"] },
                           },
                         },
                         0,
@@ -1364,82 +1351,73 @@ const bookingListing = async (req, res) => {
         },
       },
 
-      // Preload services, categories, subcategories
-      {
-        $lookup: {
-          from: "services",
-          pipeline: [],
-          as: "servicesData",
-        },
-      },
-      {
-        $lookup: {
-          from: "categories",
-          pipeline: [],
-          as: "categoriesData",
-        },
-      },
-      {
-        $lookup: {
-          from: "subcategories",
-          pipeline: [],
-          as: "subCategoriesData",
-        },
-      },
-
-      // Assigned Partners Lookup without creating duplicates
+      // Handle assigned partners - preserve whole document before unwind
       {
         $addFields: {
-          assignedPartners: {
-            $map: {
-              input: "$assignedPartners",
-              as: "assigned",
-              in: {
-                $mergeObjects: [
-                  "$$assigned",
-                  {
-                    partner: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$$ROOT.partnersData",
-                            as: "p",
-                            cond: { $eq: ["$$p._id", "$$assigned.partnerId"] },
-                          },
-                        },
-                        0,
-                      ],
-                    },
-                    service: {
-                      $arrayElemAt: [
-                        {
-                          $filter: {
-                            input: "$$ROOT.servicesData",
-                            as: "s",
-                            cond: { $eq: ["$$s._id", "$$assigned.serviceId"] },
-                          },
-                        },
-                        0,
-                      ],
-                    },
-                  },
-                ],
-              },
-            },
-          },
+          originalAssignedPartners: "$assignedPartners",
         },
       },
 
-      // Preload all partners once
+      { $unwind: { path: "$assignedPartners", preserveNullAndEmptyArrays: true } },
+
       {
         $lookup: {
           from: "partners",
-          pipeline: [],
-          as: "partnersData",
+          localField: "assignedPartners.partnerId",
+          foreignField: "_id",
+          as: "partnerInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "services",
+          localField: "assignedPartners.serviceId",
+          foreignField: "_id",
+          as: "serviceInfo",
         },
       },
 
-      // Search filter
+      {
+        $addFields: {
+          "assignedPartners.partner": { $arrayElemAt: ["$partnerInfo", 0] },
+          "assignedPartners.service": { $arrayElemAt: ["$serviceInfo", 0] },
+        },
+      },
+
+      // Group back the booking by _id and collect enriched assignedPartners
+      {
+        $group: {
+          _id: "$_id",
+          root: { $first: "$$ROOT" },
+          enrichedAssignedPartners: {
+            $push: {
+              $cond: [
+                { $gt: ["$assignedPartners.partnerId", null] },
+                "$assignedPartners",
+                "$$REMOVE",
+              ],
+            },
+          },
+        },
+      },
+      {
+        $addFields: {
+          "root.assignedPartners": "$enrichedAssignedPartners",
+        },
+      },
+      { $replaceRoot: { newRoot: "$root" } },
+
+      // Payment logs
+      {
+        $lookup: {
+          from: "paymentlogs",
+          localField: "_id",
+          foreignField: "bookingId",
+          as: "paymentLogs",
+        },
+      },
+
+      // Search logic
       ...(search
         ? [
             {
@@ -1447,37 +1425,11 @@ const bookingListing = async (req, res) => {
                 $or: [
                   { "user.name": { $regex: search, $options: "i" } },
                   { "user.email": { $regex: search, $options: "i" } },
-                  {
-                    "cart.items.service.name": {
-                      $regex: search,
-                      $options: "i",
-                    },
-                  },
-                  {
-                    "cart.items.category.name": {
-                      $regex: search,
-                      $options: "i",
-                    },
-                  },
-                  {
-                    "cart.items.subCategory.name": {
-                      $regex: search,
-                      $options: "i",
-                    },
-                  },
-                  { "partner.name": { $regex: search, $options: "i" } },
-                  {
-                    "assignedPartners.partner.name": {
-                      $regex: search,
-                      $options: "i",
-                    },
-                  },
-                  {
-                    "assignedPartners.service.name": {
-                      $regex: search,
-                      $options: "i",
-                    },
-                  },
+                  { "cart.items.service.name": { $regex: search, $options: "i" } },
+                  { "cart.items.category.name": { $regex: search, $options: "i" } },
+                  { "cart.items.subCategory.name": { $regex: search, $options: "i" } },
+                  { "assignedPartners.partner.name": { $regex: search, $options: "i" } },
+                  { "assignedPartners.service.name": { $regex: search, $options: "i" } },
                 ],
               },
             },
@@ -1487,15 +1439,28 @@ const bookingListing = async (req, res) => {
       { $sort: { createdAt: -1 } },
       { $skip: skip },
       { $limit: limitVal },
+
+      {
+        $project: {
+          user: 1,
+          bookingStatus: 1,
+          assignedPartners: 1,
+          paymentLogs: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          "cart.items": 1,
+        },
+      },
     ];
 
     // Count pipeline
-    const countPipeline = [...pipeline];
+    const countPipeline = [...basePipeline];
     countPipeline.push({ $count: "total" });
     const countResult = await BookingModel.aggregate(countPipeline);
     const total = countResult.length > 0 ? countResult[0].total : 0;
 
-    const bookings = await BookingModel.aggregate(pipeline);
+    // Final booking data
+    const bookings = await BookingModel.aggregate(basePipeline);
 
     return Helper.success(res, "Booking list fetched successfully", {
       total,
@@ -1509,6 +1474,9 @@ const bookingListing = async (req, res) => {
     return Helper.fail(res, error.message || "Something went wrong");
   }
 };
+
+
+
 
 module.exports = {
   initiateBooking,

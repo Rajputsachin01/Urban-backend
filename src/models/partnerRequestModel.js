@@ -4,7 +4,7 @@ const PartnerRequestSchema = new mongoose.Schema(
   {
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "bookings",
+      ref: "Booking",
       required: true,
     },
     partnerId: {

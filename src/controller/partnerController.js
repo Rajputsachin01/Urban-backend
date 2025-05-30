@@ -173,10 +173,13 @@ const createPartner = async (req, res) => {
     // Validation for required fields
     if (!name) return Helper.fail(res, "Name is required!");
     if (!phoneNo) return Helper.fail(res, "PhoneNo is required!");
+    if (!/^\d{10}$/.test(phoneNo.toString())) {
+      return Helper.fail(res, "PhoneNo must be exactly 10 digits!");
+    }
     if (!email) return Helper.fail(res, "Email is required!");
-    if (!address) return Helper.fail(res, "Address is required!");
-    if (!location) return Helper.fail(res, "Location is required!");
-    if (!image) return Helper.fail(res, "Image is required!");
+    // if (!address) return Helper.fail(res, "Address is required!");
+    // if (!location) return Helper.fail(res, "Location is required!");
+    // if (!image) return Helper.fail(res, "Image is required!");
     if (!idProof) return Helper.fail(res, "IdProof is required!");
     if (!vehicleImage) return Helper.fail(res, "VehicleImage is required!");
     if (!drivingLicence) return Helper.fail(res, "DrivingLicence is required!");
@@ -403,7 +406,7 @@ const loginPartner = async (req, res) => {
 const getPartnerLocation = async (req, res) => {
   try {
     const partnerId = req.userId; //Coming from JWT token via isAuth middleware
-    const { location } = req.body;
+    const { location,address } = req.body;
     const partner = await PartnerModel.findById(partnerId);
     if (!partner) {
       return Helper.fail(res, "partner not found");
@@ -413,7 +416,7 @@ const getPartnerLocation = async (req, res) => {
     }
     let updatedLocation = await PartnerModel.findByIdAndUpdate(
       partnerId,
-      { location: location },
+      { location: location,address },
       {
         new: true,
       }
