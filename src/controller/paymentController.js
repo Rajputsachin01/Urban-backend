@@ -7,13 +7,7 @@ const autoAssignFromBookingId = require("../utils/autoAssignPartner");
 const initiatePayment = async (req, res) => {
   try {
     const { bookingId } = req.body;
-    console.log(
-      "[Step 1] Received initiatePayment request, bookingId:",
-      bookingId
-    );
-
     if (!bookingId) {
-      console.error("[Error] Missing bookingId in request body");
       return Helper.fail(res, "Booking ID is required");
     }
 
@@ -29,20 +23,16 @@ const initiatePayment = async (req, res) => {
       return Helper.fail(res, "Booking not found");
     }
 
-    console.log("[Step 2] Booking found:", booking._id.toString());
-
     const amount = parseFloat(booking.totalPrice);
     const email = booking.userId?.email;
     const phoneNo = (booking.userId?.phoneNo || "9999999999").toString();
 
     if (!email) {
-      console.error(`[Error] User email missing for bookingId: ${bookingId}`);
       return Helper.fail(res, "User email not found");
     }
 
     const orderId = `ORDER_${bookingId}_${Date.now()}`;
     const isSandbox = process.env.CASHFREE_ENV === "SANDBOX";
-
     const baseUrl = isSandbox
       ? "https://sandbox.cashfree.com/pg/orders"
       : "https://api.cashfree.com/pg/orders";
@@ -57,7 +47,7 @@ const initiatePayment = async (req, res) => {
         customer_phone: phoneNo,
       },
       order_meta: {
-        return_url: `${process.env.BACKEND_URL}/v1/payment/paymentStatus?order_id=${orderId}`,
+        return_url: `${process.env.FRONTEND_URL}/paymentStatus?order_id=${orderId}`,
         notify_url: `${process.env.BACKEND_URL}/v1/payment/webhook`,
       },
     };
@@ -83,64 +73,17 @@ const initiatePayment = async (req, res) => {
       );
       return Helper.fail(res, "Cashfree order creation failed");
     }
-
-    // console.log("[Step 4] Verifying order status for orderId:", orderData.order_id);
-    // let orderStatusInfo;
-    // try {
-    //   orderStatusInfo = await verifyOrderStatus(orderData.order_id);
-    //   console.log("[Step 4.1] Order status verified:", JSON.stringify(orderStatusInfo, null, 2));
-    // } catch (error) {
-    //   console.error("[Error] Failed to verify order status:", error.response?.data || error.message);
-    //   return Helper.fail(res, "Order verification failed");
-    // }
-
-    // const cashfreeStatus = orderStatusInfo?.order_status || "UNKNOWN";
-    // console.log("[Step 4.2] Cashfree order status:", cashfreeStatus);
-
-    // let internalStatus = "pending";
-    // if (cashfreeStatus === "PAID") internalStatus = "paid";
-    // else if (cashfreeStatus === "ACTIVE") internalStatus = "pending";
-    // else if (["FAILED", "EXPIRED", "CANCELLED"].includes(cashfreeStatus)) internalStatus = "failed";
-
-    // console.log(`[Step 5] Mapped internal payment status: ${internalStatus}`);
-
-    // let assignResult = { success: false, message: "Not attempted", data: null };
-    // if (internalStatus === "paid") {
-    //   console.log("[Step 6] Payment is PAID, attempting partner auto-assignment");
-    //   try {
-    //     assignResult = await autoAssignFromBookingId(bookingId);
-    //     console.log("[Step 6.1] Partner auto-assignment result:", assignResult);
-    //   } catch (assignError) {
-    //     console.error("[Error] Auto-assign partner failed:", assignError.message);
-    //     assignResult = { success: false, message: assignError.message, data: null };
-    //   }
-    // } else {
-    //   console.log("[Step 6] Payment not PAID, skipping partner assignment");
-    // }
-
-    // console.log("[Step 7] Updating booking payment status, logs, and Cashfree orderId");
-
-    // // 🟡 Extra Logs to Check What’s Being Updated
-    // console.log("[DEBUG] Base Cashfree status:", cashfreeStatus);
-    // console.log("[DEBUG] Mapping to internal paymentStatus:", internalStatus);
-
-    // booking.cashfreeOrderId = orderId;
-    // booking.paymentStatus = internalStatus;
-    booking.paymentLogs.push({
-      initiatedAt: new Date(),
-      type: "initiate",
-      cashfreeOrderId: orderId,
-      requestPayload: payload,
-      responsePayload: orderData,
-      // verifiedStatus: cashfreeStatus,
-      // autoAssignSuccess: assignResult.success,
-      // autoAssignMessage: assignResult.message,
-      // autoAssignData: assignResult.data || null,
-    });
+    booking.cashfreeOrderId = orderData.order_id;
+   booking.paymentLogs.push({
+  type: "initiate",
+  cashfreeOrderId: orderId,
+  initiatedAt: new Date(),
+  requestPayload: payload,
+  responsePayload: orderData,
+  message: "Order created with Cashfree",
+});
 
     await booking.save();
-    console.log("[Step 7.1] Booking updated successfully");
-
     return Helper.success(res, "Order created, awaiting payment", {
       order_id: orderData.order_id,
       order_token: orderData.order_token,
@@ -329,9 +272,62 @@ const handleCashfreeWebhook = async (req, res) => {
     return Helper.error(res, "🚨 Webhook Internal Error");
   }
 };
+const paymentListing = async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      bookingStatus,
+      paymentStatus,
+    } = req.body;
+
+    const filter = { isDeleted: false };
+
+    if (bookingStatus) {
+      filter.bookingStatus = bookingStatus;
+    }
+
+    if (paymentStatus) {
+      filter.paymentStatus = paymentStatus;
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const bookings = await BookingModel.find(filter)
+      .select("_id bookingStatus paymentStatus cashfreeOrderId totalPrice")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const total = await BookingModel.countDocuments(filter);
+
+    const formatted = bookings.map((b) => ({
+      bookingId: b._id,
+      bookingStatus: b.bookingStatus,
+      paymentStatus: b.paymentStatus,
+      cashfreeOrderId: b.cashfreeOrderId,
+      totalPrice: b.totalPrice,
+    }));
+
+    return Helper.success(res, "Payment listing fetched successfully", {
+      bookings: formatted,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error("[Payment Listing Error]", error.message);
+    return Helper.fail(res, "Failed to fetch payment listings");
+  }
+};
+
+
+
 module.exports = {
   initiatePayment,
   verifyPayment,
   handleCashfreeWebhook,
   verifyOrderStatus,
+  paymentListing
 };

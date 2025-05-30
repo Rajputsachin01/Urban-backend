@@ -120,7 +120,6 @@ const autoAssignFromBookingId = async (bookingId, maxDistanceInKm = 20000) => {
     if (onePartnerForAll) {
       if (onePartnerForAll.autoAssign) {
         booking.partnerId = onePartnerForAll._id;
-        booking.bookingStatus = "Progress";
 
         booking.assignedPartners = serviceIds.map(serviceId => ({
           serviceId,

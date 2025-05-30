@@ -843,7 +843,6 @@ const assignPartnerManually = async (req, res) => {
 
     // Assign partners per service
     booking.assignedPartners = assignments;
-    booking.bookingStatus = "Progress";
     await booking.save();
 
     return Helper.success(res, "Partners assigned successfully", booking);
@@ -1253,6 +1252,8 @@ const assignPartnerManually = async (req, res) => {
 //   }
 // };
 
+
+
 const bookingListing = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;
@@ -1436,31 +1437,52 @@ const bookingListing = async (req, res) => {
           ]
         : []),
 
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limitVal },
-
       {
-        $project: {
-          user: 1,
-          bookingStatus: 1,
-          assignedPartners: 1,
-          paymentLogs: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          "cart.items": 1,
+        $facet: {
+          metadata: [{ $count: "total" }],
+          data: [
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limitVal },
+            {
+              $project: {
+                user: 1,
+                bookingStatus: 1,
+                address: 1,
+                location: 1,
+                date: 1,
+                timeSlot: 1,
+                price: 1,
+                discountAmount: 1,
+                totalPrice: 1,
+                isDeleted: 1,
+                paymentStatus: 1,
+                assignedPartners: 1,
+                paymentLogs: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                "cart.items": 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: {
+          path: "$metadata",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $addFields: {
+          total: { $ifNull: ["$metadata.total", 0] },
         },
       },
     ];
 
-    // Count pipeline
-    const countPipeline = [...basePipeline];
-    countPipeline.push({ $count: "total" });
-    const countResult = await BookingModel.aggregate(countPipeline);
-    const total = countResult.length > 0 ? countResult[0].total : 0;
-
-    // Final booking data
-    const bookings = await BookingModel.aggregate(basePipeline);
+    const result = await BookingModel.aggregate(basePipeline);
+    const bookings = result[0]?.data || [];
+    const total = result[0]?.total || 0;
 
     return Helper.success(res, "Booking list fetched successfully", {
       total,
