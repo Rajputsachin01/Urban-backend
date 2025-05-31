@@ -685,7 +685,7 @@ const acceptBookingRequest = async (req, res) => {
 const rejectBookingRequest = async (req, res) => {
   try {
     const { requestId } = req.body;
-    const partnerId = req.partnerId; // Assume partner is authenticated via middleware
+    const partnerId = req.userId; // Assume partner is authenticated via middleware
 
     const request = await PartnerRequestModel.findOne({
       _id: requestId,
