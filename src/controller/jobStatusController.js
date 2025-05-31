@@ -8,9 +8,9 @@ const createJobStatus = async (req, res) => {
         if (!partnerId) {
             return Helper.fail(res, "partner id is required")
         }
-        if (!serviceId) {
-            return Helper.fail(res, "service id is required")
-        }
+        // if (!serviceId) {
+        //     return Helper.fail(res, "service id is required")
+        // }
         if (!bookingId) {
             return Helper.fail(res, "bookingId id is required")
         }
