@@ -8,10 +8,12 @@ const reviewSchema = new mongoose.Schema({
     partnerId: {
         type: String,
         required: true,
+         ref: "partners",
     },
     userId:{
         type:String,
-        require: true
+        require: true,
+        ref: "users",
     },
     rating: {
         type: Number,

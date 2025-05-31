@@ -145,15 +145,15 @@ const listingReview = async (req, res) => {
     try {
         const userId = req.userId;
         const type = req.type;
-        const { limit = 3, page = 1, search, partnerId } = req.body;
+        const { limit = 3, page = 1, search } = req.body;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         let matchStage = { isDeleted: false };
         if (userId && type === "user") {
             matchStage.userId = userId;
         }
-        if (partnerId) {
-            matchStage.partnerId = partnerId;
+        if (userId && type == "partner") {
+            matchStage.partnerId = userId;
         }
         if (search) {
             matchStage.$or = [
