@@ -2,7 +2,7 @@ const PartnerModel = require("../models/partnerModel");
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper");
 const mongoose = require("mongoose");
-
+const moment = require("moment");
 const BookingModel = require("../models/bookingModel");
 const { ObjectId } = require("mongodb");
 const PartnerRequestModel = require("../models/partnerRequestModel");
@@ -812,19 +812,23 @@ const findAllPartners = async (req, res) => {
 };
 
 
-const partnerAnalytics = async (req, res) => {
+
+
+
+const fetchPartnerAnalytics = async (req, res) => {
   try {
     const partnerId = req.userId;
+    const { duration = "weekly" } = req.body;
 
-    // 1. Aggregate completed bookings where partner is assigned
+    const matchStage = {
+      "assignedPartners.partnerId": new mongoose.Types.ObjectId(partnerId),
+      bookingStatus: "Completed",
+      isDeleted: false,
+    };
+
+    // === 1. Total Revenue and Completed Bookings ===
     const bookingStats = await BookingModel.aggregate([
-      {
-        $match: {
-          "assignedPartners.partnerId": new mongoose.Types.ObjectId(partnerId),
-          bookingStatus: "Completed",
-          isDeleted: false,
-        },
-      },
+      { $match: matchStage },
       {
         $group: {
           _id: null,
@@ -837,19 +841,116 @@ const partnerAnalytics = async (req, res) => {
     const totalRevenue = bookingStats[0]?.totalRevenue || 0;
     const completedBookings = bookingStats[0]?.completedBookings || 0;
 
-    // 2. Get partner's average rating
+    // === 2. Revenue Breakdown ===
+    let revenueGraph = [];
+
+    if (duration === "weekly") {
+      const start = moment().subtract(6, "days").startOf("day").toDate();
+      const end = moment().endOf("day").toDate();
+
+      const weeklyRaw = await BookingModel.aggregate([
+        {
+          $match: {
+            ...matchStage,
+            date: { $gte: start, $lte: end },
+          },
+        },
+        {
+          $group: {
+            _id: { date: { $dateToString: { format: "%Y-%m-%d", date: "$date" } } },
+            amount: { $sum: "$totalPrice" },
+          },
+        },
+        { $sort: { "_id.date": 1 } },
+      ]);
+
+      const last7Days = Array.from({ length: 7 }, (_, i) => {
+        const date = moment().subtract(6 - i, "days");
+        return {
+          day: date.format("ddd"),
+          date: date.format("YYYY-MM-DD"),
+          amount: 0,
+        };
+      });
+
+      weeklyRaw.forEach((entry) => {
+        const index = last7Days.findIndex((d) => d.date === entry._id.date);
+        if (index !== -1) last7Days[index].amount = entry.amount;
+      });
+
+      revenueGraph = last7Days.map(({ day, amount }) => ({
+        label: day,
+        amount,
+      }));
+    }
+
+    else if (duration === "monthly") {
+      const start = moment().startOf("year").toDate();
+      const end = moment().endOf("month").toDate();
+
+      const monthlyRaw = await BookingModel.aggregate([
+        {
+          $match: {
+            ...matchStage,
+            date: { $gte: start, $lte: end },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$date" },
+              month: { $month: "$date" },
+            },
+            amount: { $sum: "$totalPrice" },
+          },
+        },
+        {
+          $sort: { "_id.year": 1, "_id.month": 1 },
+        },
+      ]);
+
+      const currentMonth = moment().month(); // 0-indexed (May = 4)
+      const year = moment().year();
+
+      const thisYearMonths = Array.from({ length: currentMonth + 1 }, (_, i) => {
+        return {
+          label: moment().month(i).format("MMM"),
+          year,
+          month: i + 1,
+          amount: 0,
+        };
+      });
+
+      monthlyRaw.forEach((entry) => {
+        const index = thisYearMonths.findIndex(
+          (d) => d.year === entry._id.year && d.month === entry._id.month
+        );
+        if (index !== -1) thisYearMonths[index].amount = entry.amount;
+      });
+
+      revenueGraph = thisYearMonths.map(({ label, amount }) => ({
+        label,
+        amount,
+      }));
+    }
+
+    // === 3. Average Rating ===
     const partner = await PartnerModel.findById(partnerId).select("avgRating");
 
     return Helper.success(res, "Partner analytics fetched successfully", {
       totalRevenue,
       completedBookings,
+      avgRevenue: completedBookings ? totalRevenue / completedBookings : 0,
       avgRating: partner?.avgRating || 0,
+      revenueGraph,
     });
   } catch (error) {
     console.error("Partner Analytics Error:", error);
     return Helper.fail(res, "Unable to fetch partner analytics");
   }
 };
+
+
 
 
 
@@ -871,5 +972,5 @@ module.exports = {
   listPartnerBookingRequests,
   toggleIsPublished,
   findAllPartners,
-  partnerAnalytics
+  fetchPartnerAnalytics
 };
