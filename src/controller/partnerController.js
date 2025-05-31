@@ -724,6 +724,7 @@ const listPartnerBookingRequests = async (req, res) => {
       PartnerRequestModel.find(query)
         .populate({
           path: "bookingId",
+          select: "cartId bookingStatus paymentStatus createdAt address location price totalPrice date slot",
           populate: {
             path: "cartId",
             model: "carts",
