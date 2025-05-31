@@ -1252,8 +1252,6 @@ const assignPartnerManually = async (req, res) => {
 //   }
 // };
 
-
-
 const bookingListing = async (req, res) => {
   try {
     const { page = 1, limit = 10, search = "", bookingStatus } = req.body;

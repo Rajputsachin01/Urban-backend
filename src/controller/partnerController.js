@@ -724,14 +724,13 @@ const listPartnerBookingRequests = async (req, res) => {
       PartnerRequestModel.find(query)
         .populate({
           path: "bookingId",
-          select: "cartId bookingStatus createdAt address location price totalPrice date", // Exclude paymentLogs etc
           populate: {
             path: "cartId",
-            select: "items", 
+            model: "carts",
+            select: "items",
             populate: {
-              path: "items.serviceId",
-              model: "services",
-              select: "name price duration description", 
+              path: "items.serviceId items.categoryId items.subCategoryId",
+              select: "name price duration description", // Or add "title" if needed
             },
           },
         })
@@ -753,6 +752,8 @@ const listPartnerBookingRequests = async (req, res) => {
     return Helper.fail(res, "Unable to fetch partner booking requests");
   }
 };
+
+
 
 
 // Partner isPublished toggle 
