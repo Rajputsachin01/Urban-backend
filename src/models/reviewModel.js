@@ -8,7 +8,7 @@ const reviewSchema = new mongoose.Schema({
     partnerId: {
         type: String,
         required: true,
-         ref: "partners",
+         ref: "partner",
     },
     userId:{
         type:String,

@@ -162,41 +162,50 @@ const listingReview = async (req, res) => {
   try {
     const userId = req.userId;
     const type = req.type;
-    const { limit = 3, page = 1, search, partnerId } = req.body;
+    const { limit = 3, page = 1, search } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
-    if (type == "partner") {
-      const partnerId = req.userId;
-    }
+
+    // Build match query
     let matchStage = { isDeleted: false };
+
     if (userId && type === "user") {
       matchStage.userId = userId;
     }
-    if (userId && type == "partner") {
+
+    if (userId && type === "partner") {
       matchStage.partnerId = userId;
     }
+
     if (search) {
       matchStage.$or = [{ review: { $regex: search, $options: "i" } }];
     }
+
+    // Query with population
     const reviews = await ReviewModel.find(matchStage)
+      .populate("userId", "name ") // Adjust fields as needed
+      .populate("partnerId", "name  avgRating") // Adjust fields as needed
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
 
     const totalReviews = await ReviewModel.countDocuments(matchStage);
-    if (reviews.length === 0) {
-      return Helper.fail(res, "No reviews found matching the criteria");
-    }
-    // If a specific partner is queried, fetch its avgRating
+
+    // Optional: fetch average rating for partner
     let averageRating = null;
-    if (type == "partner") {
+    if (type === "partner") {
       const partnerData = await PartnerModel.findOne(
         { _id: userId, isDeleted: false },
         { avgRating: 1 }
       );
       averageRating = partnerData?.avgRating || 0;
     }
+
+    if (!reviews || reviews.length === 0) {
+      return Helper.fail(res, "No reviews found matching the criteria");
+    }
+
     const data = {
-      averageRating: userId ? averageRating : undefined,
+      averageRating: type === "partner" ? averageRating : undefined,
       reviews,
       pagination: {
         totalReviews,
@@ -208,10 +217,11 @@ const listingReview = async (req, res) => {
 
     return Helper.success(res, "Review listing fetched", data);
   } catch (error) {
-    console.error(error);
+    console.error("listingReview error:", error);
     return Helper.fail(res, "Failed to list reviews");
   }
 };
+
 
 module.exports = {
   createReview,
