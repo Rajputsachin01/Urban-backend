@@ -711,27 +711,35 @@ const rejectBookingRequest = async (req, res) => {
 const listPartnerBookingRequests = async (req, res) => {
   try {
     const partnerId = req.userId;
-    const { page = 1, limit = 10 } = req.body;
+    const {
+      page = 1,
+      limit = 10,
+      status = "pending", // 🟡 default to pending if not passed
+    } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const query = {
       partnerId,
-      status: "pending",
       isDeleted: false,
     };
+
+    if (status) {
+      query.status = status;
+    }
 
     const [requests, total] = await Promise.all([
       PartnerRequestModel.find(query)
         .populate({
           path: "bookingId",
-          select: "cartId bookingStatus paymentStatus createdAt address location price totalPrice date slot",
+          select:
+            "cartId bookingStatus paymentStatus createdAt address location price totalPrice date slot",
           populate: {
             path: "cartId",
             model: "carts",
             select: "items",
             populate: {
               path: "items.serviceId items.categoryId items.subCategoryId",
-              select: "name price duration description", // Or add "title" if needed
+              select: "name price duration description",
             },
           },
         })
@@ -741,7 +749,7 @@ const listPartnerBookingRequests = async (req, res) => {
       PartnerRequestModel.countDocuments(query),
     ]);
 
-    return Helper.success(res, "Pending booking requests fetched", {
+    return Helper.success(res, "Booking requests fetched", {
       requests,
       total,
       totalPages: Math.ceil(total / limit),
@@ -753,6 +761,7 @@ const listPartnerBookingRequests = async (req, res) => {
     return Helper.fail(res, "Unable to fetch partner booking requests");
   }
 };
+
 
 
 
