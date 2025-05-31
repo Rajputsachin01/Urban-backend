@@ -521,7 +521,7 @@ const partnerAnalyticsAndOrders = async (req, res) => {
     // Get analytics data
     const [runningOrderCount, requestOrderCount] = await Promise.all([
       BookingModel.countDocuments({ partnerId, bookingStatus: "Progress" }),
-      BookingModel.countDocuments({ partnerId, bookingStatus: "Pending" }),
+      PartnerRequestModel.countDocuments({ partnerId, status: "pending" }),
     ]);
 
     // Fetch paginated request orders
@@ -710,9 +710,10 @@ const rejectBookingRequest = async (req, res) => {
 //for listing bookings requests for partner
 const listPartnerBookingRequests = async (req, res) => {
   try {
-    const partnerId = req.userId; 
+    const partnerId = req.userId;
     const { page = 1, limit = 10 } = req.body;
     const skip = (parseInt(page) - 1) * parseInt(limit);
+
     const query = {
       partnerId,
       status: "pending",
@@ -723,8 +724,15 @@ const listPartnerBookingRequests = async (req, res) => {
       PartnerRequestModel.find(query)
         .populate({
           path: "bookingId",
+          select: "cartId bookingStatus createdAt address location price totalPrice date", // Exclude paymentLogs etc
           populate: {
-            path: "serviceId",
+            path: "cartId",
+            select: "items", 
+            populate: {
+              path: "items.serviceId",
+              model: "services",
+              select: "name price duration description", 
+            },
           },
         })
         .sort({ createdAt: -1 })
@@ -745,6 +753,8 @@ const listPartnerBookingRequests = async (req, res) => {
     return Helper.fail(res, "Unable to fetch partner booking requests");
   }
 };
+
+
 // Partner isPublished toggle 
 const toggleIsPublished = async (req, res) => {
   try {
