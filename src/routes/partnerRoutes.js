@@ -21,5 +21,6 @@ router.post("/rejectBooking", isAuth, partnerController.rejectBookingRequest);
 router.post("/listingBookingRequests", isAuth, partnerController.listPartnerBookingRequests);
 router.post("/toggleIsPublished", isAuth, partnerController.toggleIsPublished);
 router.post("/findAll",partnerController.findAllPartners);
+router.post("/fethAnalytics",isAuth,partnerController.partnerAnalytics);
 
 module.exports = router;

@@ -1,6 +1,8 @@
 const PartnerModel = require("../models/partnerModel");
 const { signInToken } = require("../utils/auth");
 const Helper = require("../utils/helper");
+const mongoose = require("mongoose");
+
 const BookingModel = require("../models/bookingModel");
 const { ObjectId } = require("mongodb");
 const PartnerRequestModel = require("../models/partnerRequestModel");
@@ -505,7 +507,6 @@ const partnerListingWithServices = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 const partnerAnalyticsAndOrders = async (req, res) => {
   try {
     const partnerId = req.userId;
@@ -554,7 +555,6 @@ const partnerAnalyticsAndOrders = async (req, res) => {
     return Helper.fail(res, error.message);
   }
 };
-
 const partnerAnalyticsEarningsWithJobs = async (req, res) => {
   try {
     const partnerId = req.userId;
@@ -812,6 +812,47 @@ const findAllPartners = async (req, res) => {
 };
 
 
+const partnerAnalytics = async (req, res) => {
+  try {
+    const partnerId = req.userId;
+
+    // 1. Aggregate completed bookings where partner is assigned
+    const bookingStats = await BookingModel.aggregate([
+      {
+        $match: {
+          "assignedPartners.partnerId": new mongoose.Types.ObjectId(partnerId),
+          bookingStatus: "Completed",
+          isDeleted: false,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$totalPrice" },
+          completedBookings: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const totalRevenue = bookingStats[0]?.totalRevenue || 0;
+    const completedBookings = bookingStats[0]?.completedBookings || 0;
+
+    // 2. Get partner's average rating
+    const partner = await PartnerModel.findById(partnerId).select("avgRating");
+
+    return Helper.success(res, "Partner analytics fetched successfully", {
+      totalRevenue,
+      completedBookings,
+      avgRating: partner?.avgRating || 0,
+    });
+  } catch (error) {
+    console.error("Partner Analytics Error:", error);
+    return Helper.fail(res, "Unable to fetch partner analytics");
+  }
+};
+
+
+
 module.exports = {
   createPartner,
   deletePartner,
@@ -829,5 +870,6 @@ module.exports = {
   rejectBookingRequest,
   listPartnerBookingRequests,
   toggleIsPublished,
-  findAllPartners
+  findAllPartners,
+  partnerAnalytics
 };
