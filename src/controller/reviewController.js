@@ -5,12 +5,12 @@ const Helper = require("../utils/helper")
 const createReview = async (req, res) => {
     try {
         const userId = req.userId
-        const { categoryId, partnerId, rating, review } = req.body
+        const { serviceId, partnerId, rating, review } = req.body
         if (!userId) {
             return Helper.fail(res, "userId is required")
         }
-        if (!categoryId) {
-            return Helper.fail(res, "categoryId is required")
+        if (!serviceId) {
+            return Helper.fail(res, "serviceId is required")
         }
         if (!partnerId) {
             return Helper.fail(res, "partnerId is required")
@@ -27,7 +27,7 @@ const createReview = async (req, res) => {
         const addreview = await ReviewModel.create({
             userId,
             partnerId,
-            categoryId,
+            serviceId,
             review,
             rating
         })
