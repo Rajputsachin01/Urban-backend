@@ -559,16 +559,13 @@ const partnerAnalyticsEarningsWithJobs = async (req, res) => {
   try {
     const partnerId = req.userId;
     let { duration = "week", page = 1, limit = 3 } = req.body;
-
     if (!partnerId) {
       return Helper.fail(res, "Partner ID is required");
     }
-
     duration = duration.toLowerCase();
     if (!["week", "month"].includes(duration)) {
       return Helper.fail(res, "Invalid duration. Must be 'week' or 'month'");
     }
-
     const partnerObjectId = new ObjectId(partnerId);
     const now = new Date();
     const startDate = new Date(now);
@@ -813,8 +810,6 @@ const findAllPartners = async (req, res) => {
     return Helper.fail(res, "Failed to fetch partners");
   }
 };
-
-
 
 
 module.exports = {
