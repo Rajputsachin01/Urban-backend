@@ -583,7 +583,7 @@ const partnerAnalyticsEarningsWithJobs = async (req, res) => {
     // Match conditions to apply for all queries
     const baseMatch = {
       partnerId: partnerObjectId,
-      createdAt: { $gte: startDate, $lte: now },
+      date: { $gte: startDate, $lte: now },
     };
 
     // ===== Earnings Analytics =====
@@ -607,7 +607,7 @@ const partnerAnalyticsEarningsWithJobs = async (req, res) => {
       {
         $match: {
           ...baseMatch,
-          bookingStatus: "Pending",
+         bookingStatus: { $in: ["Pending", "Progress"] },
         },
       },
       {
