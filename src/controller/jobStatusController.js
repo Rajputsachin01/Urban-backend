@@ -3,7 +3,8 @@ const Helper = require("../utils/helper")
 
 const createJobStatus = async (req, res) => {
     try {
-        const { partnerId, serviceId, beforeImage, afterImage, notes } = req.body
+        const partnerId = req.userId
+        const {  serviceId, beforeImage, afterImage, notes } = req.body
         if (!partnerId) {
             return Helper.fail(res, "partner id is required")
         }
