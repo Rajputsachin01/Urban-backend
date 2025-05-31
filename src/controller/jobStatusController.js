@@ -4,12 +4,15 @@ const Helper = require("../utils/helper")
 const createJobStatus = async (req, res) => {
     try {
         const partnerId = req.userId
-        const {  serviceId, beforeImage, afterImage, notes } = req.body
+        const { bookingId, serviceId, beforeImage, afterImage, notes } = req.body
         if (!partnerId) {
             return Helper.fail(res, "partner id is required")
         }
         if (!serviceId) {
             return Helper.fail(res, "service id is required")
+        }
+        if (!bookingId) {
+            return Helper.fail(res, "bookingId id is required")
         }
         if (!beforeImage) {
             return Helper.fail(res, "beforeImage is required")
@@ -20,6 +23,7 @@ const createJobStatus = async (req, res) => {
         const jobStatus = await jobStatutsModel.create({
             partnerId,
             serviceId,
+            bookingId,
             beforeImage,
             afterImage,
             notes

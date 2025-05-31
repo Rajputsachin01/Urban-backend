@@ -2,14 +2,17 @@ const mongoose = require("mongoose")
 
 const JobStatusSchema = new mongoose.Schema({
     partnerId: {
-        type: String,
-        required: true,
-        default: "",
+        type: mongoose.Schema.Types.ObjectId,
+                 ref: "partners",
+                 required: true,
     },
     serviceId: {
-        type: String,
-        required: true,
-        default: "",
+        type: mongoose.Schema.Types.ObjectId,
+                 ref: "services",
+    },
+    bookingId: {
+        type: mongoose.Schema.Types.ObjectId,
+                 ref: "Booking",
     },
     beforeImage: {
         type: String,
