@@ -562,7 +562,6 @@ const autoAssignPartner = async (req, res) => {
   try {
     const { bookingId } = req.body;
     const result = await autoAssignFromBookingId(bookingId);
-
     if (!result.success) {
       return Helper.fail(res, result.message);
     }
