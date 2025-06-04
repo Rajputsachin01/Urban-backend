@@ -13,7 +13,7 @@ function logPaymentEvent(booking, logData) {
 }
 
 const runVerifyPaymentCron = () => {
-  cron.schedule("*/5 * * * * *", async () => {
+  cron.schedule("*/100 * * * * *", async () => {
     console.log("[CRON] Running verifyPaymentStatusCron every 5 seconds");
 
     try {

@@ -47,6 +47,7 @@ const cliclAndViewsRoutes = require("./src/routes/clicksAndViewsRoutes");
 const cartRoutes = require("./src/routes/cartRoutes");
 const paymentRoutes = require("./src/routes/paymentRoutes");
 const analyticsRoutes = require("./src/routes/analyticsRoutes");
+const leaveRoutes = require("./src/routes/leaveRoutes");
 
 app.use("/v1/admin", adminRoutes);
 app.use("/v1/user", userRoutes);
@@ -66,6 +67,7 @@ app.use("/v1/activity", cliclAndViewsRoutes);
 app.use("/v1/payment", paymentRoutes);
 app.use("/v1/cart", cartRoutes);
 app.use("/v1/analytics", analyticsRoutes);
+app.use("/v1/leave", leaveRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
