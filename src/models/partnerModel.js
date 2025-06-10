@@ -89,6 +89,14 @@ const PartnerSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    priceLimit : {
+        type : Number,
+        default : 0
+    },
+    distanceLimit : {
+        type : Number,
+        default : 0
+    },
     services:[{ type: mongoose.Schema.Types.ObjectId, ref: "services" },]
 }, 
  { timestamps: true },
